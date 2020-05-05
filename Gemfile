@@ -47,3 +47,4 @@ end
 
 gem 'slim-rails'
 gem 'bootstrap'
+gem 'rails-i18n', '~> 6.0.0'
