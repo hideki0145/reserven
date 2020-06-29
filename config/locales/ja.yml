@@ -1,0 +1,14 @@
+ja:
+  activerecord:
+    models:
+      user: ユーザ
+    attributes:
+      user:
+        id: ID
+        name: 名前
+        email: メールアドレス
+        admin: 管理者権限
+        password: パスワード
+        password_confirmation: パスワード(確認)
+        created_at: 登録日時
+        updated_at: 更新日時
