@@ -1,0 +1,16 @@
+require: rubocop-rails
+
+Rails:
+  Enabled: true
+
+Layout/LineLength:
+  Max: 120
+
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
