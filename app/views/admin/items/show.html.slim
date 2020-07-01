@@ -1,0 +1,21 @@
+h1 アイテム詳細
+
+.nav.justify-content-end
+  = link_to '一覧', admin_items_path, class: 'nav-link'
+table.table.table-hover
+  tbody
+    tr
+      th= Item.human_attribute_name(:id)
+      td= @item.id
+    tr
+      th= Item.human_attribute_name(:name)
+      td= @item.name
+    tr
+      th= Item.human_attribute_name(:created_at)
+      td= @item.created_at
+    tr
+      th= Item.human_attribute_name(:updated_at)
+      td= @item.updated_at
+
+= link_to '編集', edit_admin_item_path, class: 'btn btn-primary mr-3'
+= link_to '削除', [:admin, @item], method: :delete, data: { confirm: "アイテム「#{@item.name}」を削除します。よろしいですか？" }, class: 'btn btn-danger'

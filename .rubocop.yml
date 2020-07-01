@@ -1,5 +1,10 @@
 require: rubocop-rails
 
+AllCops:
+  Exclude:
+    - db/schema.rb
+    - Gemfile
+
 Rails:
   Enabled: true
 

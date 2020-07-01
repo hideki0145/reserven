@@ -1,2 +1,17 @@
-h1 Statuses#home
-p Find me in app/views/statuses/home.html.slim
+hr
+h3 こんにちは、 #{current_user.name} さん
+hr
+
+.mb-3
+table.table.table-hover
+  thead.thead-default
+    tr
+      th= Item.human_attribute_name(:name)
+      th= Status.model_name.human
+      th
+  tbody
+    - @items.each do |item|
+      tr
+        td= item.name
+        td= '[未使用]'
+        td= '[12:34] 迄 [使用する]'

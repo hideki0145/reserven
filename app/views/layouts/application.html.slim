@@ -13,9 +13,10 @@ html
 
       ul.navbar-nav.ml-auto
         - if current_user
-          li.nav-item= link_to '利用状況', statuses_home_path, class: 'nav-link'
+          li.nav-item= link_to '利用状況', status_path, class: 'nav-link'
           - if current_user.admin?
             li.nav-item= link_to 'ユーザ一覧', admin_users_path, class: 'nav-link'
+            li.nav-item= link_to 'アイテム一覧', admin_items_path, class: 'nav-link'
           li.nav-item= link_to 'ログアウト', logout_path, method: :delete, class: 'nav-link'
         - else
           li.nav-item= link_to 'ログイン', login_path, class: 'nav-link'

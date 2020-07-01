@@ -2,6 +2,8 @@ ja:
   activerecord:
     models:
       user: ユーザ
+      item: アイテム
+      status: ステータス
     attributes:
       user:
         id: ID
@@ -10,5 +12,16 @@ ja:
         admin: 管理者権限
         password: パスワード
         password_confirmation: パスワード(確認)
+        created_at: 登録日時
+        updated_at: 更新日時
+      item:
+        id: ID
+        name: 名前
+        created_at: 登録日時
+        updated_at: 更新日時
+      status:
+        id: ID
+        use_flg: 使用中
+        expires_at: 有効期限
         created_at: 登録日時
         updated_at: 更新日時
