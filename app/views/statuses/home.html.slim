@@ -13,5 +13,9 @@ table.table.table-hover
     - @items.each do |item|
       tr
         td= item.name
-        td= '[未使用]'
-        td= '[12:34] 迄 [使用する]'
+        - if item.status&.use?
+          td #{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中
+          td
+        - else
+          td 未使用
+          td= '[12:34] 迄 [使用する]'
