@@ -22,6 +22,6 @@ ja:
       status:
         id: ID
         use_flg: 使用中
-        expires_at: 有効期限
+        expires_at: 使用期限
         created_at: 登録日時
         updated_at: 更新日時

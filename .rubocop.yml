@@ -11,6 +11,9 @@ Rails:
 Layout/LineLength:
   Max: 120
 
+Metrics/AbcSize:
+  Max: 50
+
 Style/ClassAndModuleChildren:
   Enabled: false
 
@@ -19,3 +22,6 @@ Style/Documentation:
 
 Style/FrozenStringLiteralComment:
   Enabled: false
+
+Style/MethodLength:
+  Max: 30
