@@ -1,0 +1,54 @@
+<script>
+  window.addEventListener('load', () => {
+    setInterval('location.reload()', 600000);
+  });
+</script>
+
+<hr>
+<h3>こんにちは、 <%= "#{current_user.name}" %> さん</h3>
+<hr>
+
+<div class="mb-3"></div>
+<table class="table table-hover">
+  <thead class="thead-default">
+    <tr>
+      <th><%= Item.human_attribute_name(:name) %></th>
+      <th><%= "#{Status.model_name.human}(10分毎に自動更新)" %></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @items.each do |item| %>
+      <tr>
+        <td><%= item.name %></td>
+        <% if item.status&.use?(current_user.id) %>
+          <% if item.status.user_id == current_user.id %>
+            <td><%= "自分が[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
+            <td>
+              <%= form_with url: extend_status_path(id: item.id), local: true do |f| %>
+                <%= f.time_field :expires_at, value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                &nbsp;迄&nbsp;
+                <%= f.submit '延長する', class: 'btn btn-success' %>
+              <% end %>
+              <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
+                <%= f.submit '使用終了', class: 'btn btn-primary' %>
+              <% end %>
+            </td>
+          <% else %>
+            <td><%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
+            <td></td>
+          <% end %>
+        <% else %>
+          <td>未使用</td>
+          <td>
+            <%= form_with url: update_status_path(id: item.id), local: true do |f| %>
+              <%= f.time_field :expires_at, value: (Time.current + 60 * 15).strftime('%H:%M') %>
+              &nbsp;迄&nbsp;
+              <%= f.submit '使用する', class: 'btn btn-primary' %>
+            <% end %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

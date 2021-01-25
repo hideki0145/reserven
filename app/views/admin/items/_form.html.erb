@@ -1,0 +1,15 @@
+<% if item.errors.present? %>
+  <ul id="error_explanation">
+    <% item.errors.full_messages.each do |message| %>
+      <li><%= message %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<%= form_with model: [:admin, item], local: true do |f| %>
+  <div class="form-group">
+    <%= f.label :name, '名前' %>
+    <%= f.text_field :name, class: 'form-control' %>
+  </div>
+  <%= f.submit '登録する', class: 'btn btn-primary' %>
+<% end %>
