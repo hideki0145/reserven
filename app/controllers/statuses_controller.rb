@@ -62,8 +62,9 @@ class StatusesController < ApplicationController
   private
 
   def post_slack(text)
-    if ENV['SLACK_TOKEN'].blank? || ENV['SLACK_CHANNEL'].blank? || text.blank?
-      logger.debug text
+    post_text = "<!here> #{text}"
+    if ENV['SLACK_TOKEN'].blank? || ENV['SLACK_CHANNEL'].blank?
+      logger.debug post_text
       return
     end
 
@@ -75,7 +76,7 @@ class StatusesController < ApplicationController
     req.set_form_data(
       token: ENV['SLACK_TOKEN'],
       channel: ENV['SLACK_CHANNEL'],
-      text: "<!here> #{text}"
+      text: post_text
     )
     logger.info http.request(req)
   end
