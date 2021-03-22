@@ -3,11 +3,15 @@
 <%= form_with scope: :session, local: true do |f| %>
   <div class="form-group">
     <%= f.label :email, 'メールアドレス' %>
-    <%= f.text_field :email, class: 'form-control', id: 'session_email' %>
+    <%= f.text_field :email, class: 'form-control' %>
   </div>
   <div class="form-group">
     <%= f.label :password, 'パスワード' %>
-    <%= f.password_field :password, class: 'form-control', id: 'session_password' %>
+    <%= f.password_field :password, class: 'form-control' %>
+  </div>
+  <div class="form-group form-check">
+    <%= f.check_box :remember_cookies, class: 'form-check-input' %>
+    <%= f.label :remember_cookies, 'ログイン状態を保持' %>
   </div>
   <%= f.submit 'ログインする', class: 'btn btn-primary' %>
 <% end %>
