@@ -62,8 +62,8 @@ class StatusesController < ApplicationController
   private
 
   def post_slack(text)
-    post_text = "<!here> #{text}"
-    if ENV['SLACK_TOKEN'].blank? || ENV['SLACK_CHANNEL'].blank?
+    post_text = text.to_s
+    if ENV['SLACK_TOKEN'].blank? || ENV['SLACK_CHANNEL'].blank? || post_text.blank?
       logger.debug post_text
       return
     end

@@ -38,6 +38,12 @@
             <td><%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
             <td></td>
           <% end %>
+        <% elsif item.status&.grace_period? %>
+            <td>
+              <%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %><br>
+              <%= "(15分の猶予期間中)" %>
+            </td>
+            <td></td>
         <% else %>
           <td>未使用</td>
           <td>
