@@ -7,26 +7,24 @@
 <% end %>
 
 <%= form_with model: [:admin, user], local: true do |f| %>
-  <div class="form-group">
-    <%= f.label :name, '名前' %>
+  <div class="mb-3">
+    <%= f.label :name, '名前', class: 'form-label' %>
     <%= f.text_field :name, class: 'form-control' %>
   </div>
-  <div class="form-group">
-    <%= f.label :email, 'メールアドレス' %>
+  <div class="mb-3">
+    <%= f.label :email, 'メールアドレス', class: 'form-label' %>
     <%= f.text_field :email, class: 'form-control' %>
   </div>
-  <div class="form-check">
-    <%= f.label :admin, class: 'form-check-label' do %>
-      <%= f.check_box :admin, class: 'form-check-input' %>
-      管理者権限
-    <% end %>
+  <div class="form-check mb-3">
+    <%= f.check_box :admin, class: 'form-check-input' %>
+    <%= f.label :admin, '管理者権限', class: 'form-check-label' %>
   </div>
-  <div class="form-group">
-    <%= f.label :password, 'パスワード' %>
+  <div class="mb-3">
+    <%= f.label :password, 'パスワード', class: 'form-label' %>
     <%= f.password_field :password, class: 'form-control' %>
   </div>
-  <div class="form-group">
-    <%= f.label :password_confirmation, 'パスワード(確認)' %>
+  <div class="mb-3">
+    <%= f.label :password_confirmation, 'パスワード(確認)', class: 'form-label' %>
     <%= f.password_field :password_confirmation, class: 'form-control' %>
   </div>
   <%= f.submit '登録する', class: 'btn btn-primary' %>

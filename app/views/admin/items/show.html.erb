@@ -3,26 +3,28 @@
 <div class="nav justify-content-end">
   <%= link_to '一覧', admin_items_path, class: 'nav-link' %>
 </div>
-<table class="table table-hover">
-  <tbody>
-    <tr>
-      <th><%= Item.human_attribute_name(:id) %></th>
-      <td><%= @item.id %></td>
-    </tr>
-    <tr>
-      <th><%= Item.human_attribute_name(:name) %></th>
-      <td><%= @item.name %></td>
-    </tr>
-    <tr>
-      <th><%= Item.human_attribute_name(:created_at) %></th>
-      <td><%= @item.created_at %></td>
-    </tr>
-    <tr>
-      <th><%= Item.human_attribute_name(:updated_at) %></th>
-      <td><%= @item.updated_at %></td>
-    </tr>
-  </tbody>
-</table>
+<div class="table-responsive">
+  <table class="table table-hover">
+    <tbody>
+      <tr>
+        <th><%= Item.human_attribute_name(:id) %></th>
+        <td><%= @item.id %></td>
+      </tr>
+      <tr>
+        <th><%= Item.human_attribute_name(:name) %></th>
+        <td><%= @item.name %></td>
+      </tr>
+      <tr>
+        <th><%= Item.human_attribute_name(:created_at) %></th>
+        <td><%= @item.created_at %></td>
+      </tr>
+      <tr>
+        <th><%= Item.human_attribute_name(:updated_at) %></th>
+        <td><%= @item.updated_at %></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-<%= link_to '編集', edit_admin_item_path, class: 'btn btn-primary mr-3' %>
-<%= link_to '削除', [:admin, @item], method: :delete, data: { confirm: "アイテム「#{@item.name}」を削除します。よろしいですか？" }, class: 'btn btn-danger' %>
+<%= link_to '編集', edit_admin_item_path, class: 'btn btn-primary me-3' %>
+<%= button_to '削除', [:admin, @item], method: :delete, form: { class: 'd-inline', data: { confirm: "アイテム「#{@item.name}」を削除します。よろしいですか？" } }, class: 'btn btn-danger' %>

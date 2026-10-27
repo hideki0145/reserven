@@ -1,36 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
-    <title>Reserven</title>
+    <title><%= content_for(:title) || "Reserven" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Reserven">
+    <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
-    <%= stylesheet_link_tag 'application', media: 'all', 'data-turbolinks-track': 'reload' %>
-    <%= javascript_pack_tag 'application', 'data-turbolinks-track': 'reload' %>
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Load Bootstrap before application overrides, without a CSS build step. %>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
+    <%= stylesheet_link_tag "application", media: "all" %>
+    <%= javascript_include_tag "application", defer: true %>
   </head>
 
   <body>
-    <div class="app-title navbar navbar-expand-md navbar-light bg-light">
-      <div class="navbar-brand">Reserven</div>
-      <ul class="navbar-nav ml-auto">
-        <% if current_user %>
-          <li class="nav-item"><%= link_to '利用状況', status_path, class: 'nav-link' %></li>
-          <% if current_user.admin? %>
-            <li class="nav-item"><%= link_to 'ユーザ一覧', admin_users_path, class: 'nav-link' %></li>
-            <li class="nav-item"><%= link_to 'アイテム一覧', admin_items_path, class: 'nav-link' %></li>
+    <nav class="app-title navbar navbar-expand-md bg-body-tertiary border-bottom mb-4" aria-label="メインナビゲーション">
+      <div class="container gap-2">
+        <%= link_to 'Reserven', root_path, class: 'navbar-brand' %>
+        <ul class="navbar-nav ms-auto flex-row flex-wrap gap-2 align-items-center">
+          <% if current_user %>
+            <li class="nav-item"><%= link_to '利用状況', status_path, class: 'nav-link' %></li>
+            <% if current_user.admin? %>
+              <li class="nav-item"><%= link_to 'ユーザ一覧', admin_users_path, class: 'nav-link' %></li>
+              <li class="nav-item"><%= link_to 'アイテム一覧', admin_items_path, class: 'nav-link' %></li>
+            <% end %>
+            <li class="nav-item"><%= button_to 'ログアウト', logout_path, method: :delete, class: 'nav-link btn btn-link' %></li>
+          <% else %>
+            <li class="nav-item"><%= link_to 'ログイン', login_path, class: 'nav-link' %></li>
           <% end %>
-          <li class="nav-item"><%= link_to 'ログアウト', logout_path, method: :delete, class: 'nav-link' %> </li>
-        <% else %>
-          <li class="nav-item"><%= link_to 'ログイン', login_path, class: 'nav-link' %></li>
-        <% end %>
-      </ul>
-    </div>
-    <div class="container">
+        </ul>
+      </div>
+    </nav>
+    <main class="container pb-4">
       <% if flash.notice.present? %>
         <div class="alert alert-success"><%= flash.notice %></div>
       <% end %>
+      <% if flash.alert.present? %>
+        <div class="alert alert-danger"><%= flash.alert %></div>
+      <% end %>
       <%= yield %>
-    </div>
+    </main>
   </body>
 </html>

@@ -3,30 +3,33 @@
 <%= link_to '新規登録', new_admin_user_path, class: 'btn btn-primary' %>
 
 <div class="mb-3"></div>
-<table class="table table-hover">
-  <thead class="thead-default">
-    <tr>
-      <th><%= User.human_attribute_name(:name) %></th>
-      <th><%= User.human_attribute_name(:email) %></th>
-      <th><%= User.human_attribute_name(:admin) %></th>
-      <th><%= User.human_attribute_name(:created_at) %></th>
-      <th><%= User.human_attribute_name(:updated_at) %></th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @users.each do |user| %>
+<p class="small text-body-secondary d-md-none">表は横にスクロールできます。</p>
+<div class="table-responsive">
+  <table class="table table-hover text-nowrap align-middle">
+    <thead class="table-light">
       <tr>
-        <td><%= link_to user.name, [:admin, user] %></td>
-        <td><%= user.email %></td>
-        <td><%= user.admin? ? '○' : '×' %></td>
-        <td><%= user.created_at %></td>
-        <td><%= user.updated_at %></td>
-        <td>
-          <%= link_to '編集', edit_admin_user_path(user), class: 'btn btn-primary mr-3' %>
-          <%= link_to '削除', [:admin, user], method: :delete, data: { confirm: "ユーザ「#{user.name}」を削除します。よろしいですか？" }, class: 'btn btn-danger' %>
-        </td>
+        <th><%= User.human_attribute_name(:name) %></th>
+        <th><%= User.human_attribute_name(:email) %></th>
+        <th><%= User.human_attribute_name(:admin) %></th>
+        <th><%= User.human_attribute_name(:created_at) %></th>
+        <th><%= User.human_attribute_name(:updated_at) %></th>
+        <th></th>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% @users.each do |user| %>
+        <tr>
+          <td><%= link_to user.name, [:admin, user] %></td>
+          <td><%= user.email %></td>
+          <td><%= user.admin? ? '○' : '×' %></td>
+          <td><%= user.created_at %></td>
+          <td><%= user.updated_at %></td>
+          <td>
+            <%= link_to '編集', edit_admin_user_path(user), class: 'btn btn-primary me-3' %>
+            <%= button_to '削除', [:admin, user], method: :delete, form: { class: 'd-inline', data: { confirm: "ユーザ「#{user.name}」を削除します。よろしいですか？" } }, class: 'btn btn-danger' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

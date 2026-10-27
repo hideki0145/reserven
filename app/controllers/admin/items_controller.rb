@@ -19,7 +19,7 @@ class Admin::ItemsController < ApplicationController
     if @item.save
       redirect_to admin_item_path(@item), notice: "アイテム「#{@item.name}」を登録しました。"
     else
-      render :new
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -33,7 +33,7 @@ class Admin::ItemsController < ApplicationController
     if @item.update(item_params)
       redirect_to admin_item_path(@item), notice: "アイテム「#{@item.name}」を更新しました。"
     else
-      render :edit
+      render :edit, status: :unprocessable_content
     end
   end
 

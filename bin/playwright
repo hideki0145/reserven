@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+require_relative "../config/boot"
+require "json"
+require "playwright"
+
+root = File.expand_path("..", __dir__)
+cli = File.join(root, "node_modules/.bin/playwright")
+package = File.join(root, "node_modules/playwright/package.json")
+
+unless File.executable?(cli) && File.file?(package)
+  abort "Playwright CLI is not installed. Run npm ci first."
+end
+
+expected = Playwright::COMPATIBLE_PLAYWRIGHT_VERSION.strip
+installed = JSON.parse(File.read(package)).fetch("version")
+unless installed == expected
+  abort "Playwright version mismatch: Ruby client requires #{expected}, CLI is #{installed}. " \
+        "Update package.json and package-lock.json, then run npm ci."
+end
+
+exec cli, *ARGV

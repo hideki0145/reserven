@@ -19,7 +19,7 @@ class Admin::UsersController < ApplicationController
     if @user.save
       redirect_to admin_user_path(@user), notice: "ユーザ「#{@user.name}」を登録しました。"
     else
-      render :new
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -33,7 +33,7 @@ class Admin::UsersController < ApplicationController
     if @user.update(user_params)
       redirect_to admin_user_path(@user), notice: "ユーザ「#{@user.name}」を更新しました。"
     else
-      render :edit
+      render :edit, status: :unprocessable_content
     end
   end
 

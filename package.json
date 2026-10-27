@@ -1,19 +1,11 @@
 {
-  "name": "reserven",
+  "name": "reserven-browser-tests",
   "private": true,
-  "dependencies": {
-    "@rails/ujs": "^6.0.0",
-    "@rails/webpacker": "^5.4.3",
-    "turbolinks": "^5.2.0",
-    "webpack": "^4.46.0",
-    "webpack-cli": "^3.3.12"
-  },
-  "version": "0.1.0",
-  "devDependencies": {
-    "webpack-dev-server": "^3"
-  },
+  "description": "Playwright CLI for RSpec browser tests; no application asset build",
   "engines": {
-    "node": "16.18.0",
-    "yarn": "1.22.19"
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
   }
 }
