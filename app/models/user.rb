@@ -3,6 +3,8 @@ class User < ApplicationRecord
 
   has_secure_password
 
+  normalizes :email, with: ->(email) { email.strip.downcase }
+
   has_many :statuses, dependent: :destroy
 
   validates :name, presence: true

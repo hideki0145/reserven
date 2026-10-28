@@ -39,6 +39,20 @@ RSpec.describe 'Sessions', type: :request do
     expect(response).to redirect_to(login_path)
   end
 
+  it 'logs in with surrounding whitespace and different email capitalization' do
+    post login_path, params: { session: { email: "  #{user.email.upcase}  ", password: 'test-password' } }
+    expect(response).to redirect_to(root_path)
+    get root_path
+    expect(response.body).to include(user.name)
+  end
+
+  it 'rejects missing and blank emails without an exception' do
+    [nil, '   '].each do |email|
+      post login_path, params: { session: { email: email, password: 'test-password' } }
+      expect(response).to have_http_status(:unprocessable_content)
+    end
+  end
+
   it 'remembers a user and revokes the token on logout' do
     login(user, remember: '1')
     expect(user.reload.remember_digest).to be_present

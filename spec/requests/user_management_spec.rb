@@ -4,6 +4,19 @@ RSpec.describe 'User account management', type: :request do
   let!(:admin) { create_user(admin: true) }
   before { login(admin) }
 
+  it 'normalizes emails when creating and updating users and rejects duplicates' do
+    post admin_users_path, params: { user: { name: '新規利用者', email: ' New@Example.COM ',
+                                           password: 'test-password', password_confirmation: 'test-password' } }
+    created = User.find_by!(email: 'new@example.com')
+    expect(response).to redirect_to(admin_user_path(created))
+    patch admin_user_path(created), params: { user: { email: ' Updated@Example.COM ' } }
+    expect(response).to redirect_to(admin_user_path(created))
+    expect(created.reload.email).to eq('updated@example.com')
+    patch admin_user_path(created), params: { user: { email: " #{admin.email.upcase} " } }
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(created.reload.email).to eq('updated@example.com')
+  end
+
   it 'rejects deletion, demotion and disabling of the last active administrator' do
     [{ admin: '0' }, { disabled: '1' }].each do |attributes|
       patch admin_user_path(admin), params: { user: attributes }
