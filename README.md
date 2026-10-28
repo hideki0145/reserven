@@ -17,11 +17,22 @@ Ruby 4.0.9とBundler 4.0.23を用意します。miseを利用する場合：
 `mise.toml`でRubyとブラウザテスト用のNode.jsのバージョンを管理しています。
 
 ```sh
+cp .env.sample .env
 mise install
 ruby -v
 gem install bundler -v 4.0.23
 bin/setup --skip-server
 ```
+
+`.env`が既にある場合は、コピーで上書きせず必要な設定を追記してください。
+開発環境でSlack通知を試す場合は、`.env`の`SLACK_WEBHOOK_URL`のコメントを外し、
+開発用チャンネルのWebhook URLへ置き換えます。未設定なら通知しません。
+`.env`はGit管理対象外です。
+
+`mise.toml`の`[env]`設定で`.env`を読み込みます。
+シェルでmiseを有効化していない場合も、`mise exec -- bin/rails server`で設定を適用して起動できます。
+miseを使用しない場合は、必要な環境変数をシェルやプロセス管理ツールで設定してください。
+RSpecでは`SLACK_WEBHOOK_URL`を無効化し、実際のSlack通知は送信しません。
 
 `bin/setup`はRails標準の生成内容を維持しており、依存gemのインストール・DB準備後に開発サーバを起動します。上記の`--skip-server`を付けるとサーバを起動しません。Linuxでgemのソースビルドが必要な場合は、コンパイラとSQLite開発用ライブラリなども必要です。
 
@@ -141,7 +152,15 @@ Capybaraの設定は`spec/support/capybara.rb`で管理します。
 | `APP_HOST` | 公開するホスト名 |
 | `SQLITE_DATABASE_PATH` | DBの絶対パス。既定は`storage/production.sqlite3` |
 | `RAILS_MAX_THREADS` | Pumaのスレッド数。既定3 |
-| `SLACK_TOKEN` / `SLACK_CHANNEL` | 任意。両方設定した場合だけ通知 |
+| `SLACK_WEBHOOK_URL` | 任意。設定した場合だけSlackへ通知 |
+
+Slack通知を利用する場合は、SlackアプリのIncoming Webhooksを有効にし、
+通知先チャンネルを選んで発行したHTTPSのWebhook URLを`SLACK_WEBHOOK_URL`へ設定してください。
+手順は[Slack公式ドキュメント](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)を参照してください。
+投稿先はWebhook URLに紐づくため、チャンネルの環境変数は不要です。
+従来の`SLACK_TOKEN`と`SLACK_CHANNEL`は使用しません。既存環境では設定を置き換えてください。
+Webhook URLは秘密情報として管理し、Gitやログへ記録しないでください。
+未設定の場合は通知せず、通知失敗時も利用開始・延長・終了の処理結果は維持します。
 
 SQLiteはサーバのローカルディスクに配置し、
 リリース更新時にDBファイルを置き換えないようにしてください。

@@ -11,7 +11,7 @@ RSpec.describe 'Item usage', type: :request do
 
   before do
     allow(ENV).to receive(:[]).and_call_original
-    allow(ENV).to receive(:[]).with('SLACK_TOKEN').and_return(nil)
+    allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(nil)
     login(user)
   end
 
@@ -90,25 +90,68 @@ RSpec.describe 'Item usage', type: :request do
     expect(response.body).to include('data-auto-refresh', '自分が', '延長する', '使用終了')
   end
 
-  context 'with Slack configured' do
-    before do
-      allow(ENV).to receive(:[]).with('SLACK_TOKEN').and_return('test-token')
-      allow(ENV).to receive(:[]).with('SLACK_CHANNEL').and_return('test-channel')
-    end
-
-    it 'posts a notification' do
-      notification = stub_request(:post, 'https://slack.com/api/chat.postMessage')
-                     .with(body: hash_including('token' => 'test-token', 'channel' => 'test-channel'))
-                     .to_return(status: 200, body: '{"ok":true}')
-      post update_status_path(item), params: { expires_at: '12:30' }
-      expect(notification).to have_been_requested.once
-    end
-
-    it 'keeps the successful reservation when Slack times out' do
-      stub_request(:post, 'https://slack.com/api/chat.postMessage').to_timeout
+  [nil, '', ' '].each do |webhook_url|
+    it "skips Slack notifications when the webhook URL is #{webhook_url.inspect}" do
+      allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(response).to redirect_to(status_path)
       expect(item.reload.status.use_flg).to be(true)
+      expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
+    end
+  end
+
+  context 'with Slack configured' do
+    let(:webhook_url) { 'https://hooks.slack.com/services/TEST/CHANNEL/SECRET' }
+
+    before do
+      allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)
+    end
+
+    it 'posts notifications for starting, extending and ending usage' do
+      texts = [
+        "#{item.name}を[#{I18n.l Time.zone.local(2026, 10, 27, 12, 30), format: :short}]迄 #{user.name}さんが使用します。",
+        "#{item.name}を[#{I18n.l Time.zone.local(2026, 10, 27, 13), format: :short}]迄 #{user.name}さんが使用延長しました。",
+        "#{item.name}を#{user.name}さんが使用終了しました。"
+      ]
+      notifications = texts.map do |text|
+        stub_request(:post, webhook_url)
+          .with(headers: { 'Content-Type' => 'application/json' }, body: { text: text }.to_json)
+          .to_return(status: 200, body: 'ok')
+      end
+      post update_status_path(item), params: { expires_at: '12:30' }
+      post extend_status_path(item), params: { expires_at: '13:00' }
+      post end_use_status_path(item)
+      notifications.each { |notification| expect(notification).to have_been_requested.once }
+    end
+
+    it 'keeps the successful reservation when Slack times out' do
+      stub_request(:post, webhook_url).to_timeout
+      expect(Rails.logger).to receive(:warn).with('Slack notification failed (Net::OpenTimeout)')
+      post update_status_path(item), params: { expires_at: '12:30' }
+      expect(response).to redirect_to(status_path)
+      expect(item.reload.status.use_flg).to be(true)
+    end
+
+    it 'keeps the successful reservation when Slack returns an error' do
+      stub_request(:post, webhook_url).to_return(status: 403, body: 'action_prohibited')
+      expect(Rails.logger).to receive(:warn).with('Slack notification failed (HTTP 403)')
+      post update_status_path(item), params: { expires_at: '12:30' }
+      expect(response).to redirect_to(status_path)
+      expect(item.reload.status.use_flg).to be(true)
+    end
+
+    ['not a URL', 'http://hooks.slack.com/services/TEST/CHANNEL/SECRET', 'https:/missing-host'].each do |invalid_url|
+      context "with invalid webhook URL #{invalid_url.inspect}" do
+        let(:webhook_url) { invalid_url }
+
+        it 'keeps the successful reservation and logs no webhook URL' do
+          expect(Rails.logger).to receive(:warn).with(/\ASlack notification failed \((invalid webhook URL|URI::InvalidURIError)\)\z/)
+          post update_status_path(item), params: { expires_at: '12:30' }
+          expect(response).to redirect_to(status_path)
+          expect(item.reload.status.use_flg).to be(true)
+          expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
+        end
+      end
     end
   end
 end

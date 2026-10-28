@@ -72,25 +72,28 @@ class StatusesController < ApplicationController
 
   def post_slack(text)
     post_text = text.to_s
-    if ENV['SLACK_TOKEN'].blank? || ENV['SLACK_CHANNEL'].blank? || post_text.blank?
+    webhook_url = ENV['SLACK_WEBHOOK_URL']
+    if webhook_url.blank? || post_text.blank?
       logger.debug post_text
       return
     end
 
-    uri = URI.parse('https://slack.com/api/chat.postMessage')
+    uri = URI.parse(webhook_url)
+    unless uri.is_a?(URI::HTTPS) && uri.host.present?
+      logger.warn 'Slack notification failed (invalid webhook URL)'
+      return
+    end
+
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.open_timeout = 5
     http.read_timeout = 5
-    req = Net::HTTP::Post.new(uri.path)
-    req.set_form_data(
-      token: ENV['SLACK_TOKEN'],
-      channel: ENV['SLACK_CHANNEL'],
-      text: post_text
-    )
+    req = Net::HTTP::Post.new(uri.request_uri)
+    req['Content-Type'] = 'application/json'
+    req.body = { text: post_text }.to_json
     response = http.request(req)
     logger.warn "Slack notification failed (HTTP #{response.code})" unless response.is_a?(Net::HTTPSuccess)
-  rescue Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError => e
+  rescue URI::InvalidURIError, Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError => e
     logger.warn "Slack notification failed (#{e.class})"
   end
 end
