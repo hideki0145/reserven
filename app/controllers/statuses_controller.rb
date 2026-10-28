@@ -2,7 +2,7 @@ require 'net/https'
 
 class StatusesController < ApplicationController
   def home
-    @items = Item.all
+    @items = Item.visible_on_status.includes(status: :user)
   end
 
   def deadline_preview
@@ -19,6 +19,8 @@ class StatusesController < ApplicationController
   def update_status
     item = Item.find(params[:id])
     item.with_lock do
+      return if reject_disabled_item(item)
+
       if item.status.blank?
         item.build_status
       elsif item.status.use?(current_user.id) || item.status.grace_period?
@@ -41,6 +43,8 @@ class StatusesController < ApplicationController
     item = Item.find(params[:id])
     previous_expires_at = nil
     item.with_lock do
+      return if reject_disabled_item(item)
+
       if item.status.blank? || !item.status.use_flg?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
@@ -85,6 +89,13 @@ class StatusesController < ApplicationController
   end
 
   private
+
+  def reject_disabled_item(item)
+    return false unless item.disabled?
+
+    redirect_to status_path, alert: "#{item.name}は利用停止中です。"
+    true
+  end
 
   def confirm_overnight_usage(item, expires_at, operation)
     return false if expires_at.to_date == Time.current.to_date

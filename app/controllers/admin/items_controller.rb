@@ -39,14 +39,17 @@ class Admin::ItemsController < ApplicationController
 
   def destroy
     item = Item.find(params[:id])
-    item.destroy
-    redirect_to admin_items_path, notice: "アイテム「#{item.name}」を削除しました。"
+    if item.destroy
+      redirect_to admin_items_path, notice: "アイテム「#{item.name}」を削除しました。"
+    else
+      redirect_to admin_item_path(item), alert: item.errors.full_messages.join(' ')
+    end
   end
 
   private
 
   def item_params
-    params.require(:item).permit(:name)
+    params.require(:item).permit(:name, :disabled)
   end
 
   def require_admin

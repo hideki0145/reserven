@@ -38,7 +38,8 @@ RSpec.describe 'User account management', type: :request do
     get admin_users_path
     html = Nokogiri::HTML(response.body)
     expect(html.text).to include('2026/10/28 19:30:15')
-    expect(html.at_css('tbody tr td.text-center').text).to eq('○')
+    row = html.at_css("a[href='#{admin_user_path(admin)}']").ancestors('tr').first
+    expect(row.at_css('td.text-center').text).to eq('○')
     get admin_user_path(admin)
     expect(Nokogiri::HTML(response.body).at_css('a.btn.btn-outline-secondary')['href']).to eq(admin_users_path)
   end

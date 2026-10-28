@@ -9,6 +9,7 @@
     <thead class="table-light">
       <tr>
         <th><%= Item.human_attribute_name(:name) %></th>
+        <th class="text-center">状態</th>
         <th><%= Item.human_attribute_name(:created_at) %></th>
         <th><%= Item.human_attribute_name(:updated_at) %></th>
         <th></th>
@@ -18,8 +19,9 @@
       <% @items.each do |item| %>
         <tr>
           <td><%= link_to item.name, [:admin, item] %></td>
-          <td><%= item.created_at %></td>
-          <td><%= item.updated_at %></td>
+          <td class="text-center"><span class="badge <%= item.disabled? ? 'text-bg-secondary' : 'text-bg-success' %>"><%= item.disabled? ? '無効' : '有効' %></span></td>
+          <td><%= l item.created_at, format: :timestamp %></td>
+          <td><%= l item.updated_at, format: :timestamp %></td>
           <td>
             <%= link_to '編集', edit_admin_item_path(item), class: 'btn btn-primary me-3' %>
             <%= button_to '削除', [:admin, item], method: :delete, form: { class: 'd-inline', data: { confirm: "アイテム「#{item.name}」を削除します。よろしいですか？" } }, class: 'btn btn-danger' %>

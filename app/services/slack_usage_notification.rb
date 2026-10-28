@@ -15,8 +15,8 @@ class SlackUsageNotification
     when :end
       title = "✅ #{item.name} の利用を終了"
       label = '状態'
-      value = '利用可能'
-      text = "#{item.name}を#{user.name}さんが利用終了しました。現在は利用可能です。"
+      value = item.disabled? ? '利用停止中' : '利用可能'
+      text = "#{item.name}を#{user.name}さんが利用終了しました。現在は#{value}です。"
     else
       raise ArgumentError, "Unknown usage event: #{event}"
     end

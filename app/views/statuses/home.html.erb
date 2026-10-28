@@ -18,18 +18,20 @@
         <tr>
           <td class="fw-semibold"><%= item.name %></td>
           <% status = item.status %>
-          <% in_use = status&.use?(current_user.id) %>
+          <% in_use = (item.disabled? ? status&.use_flg? : status&.use?(current_user.id)) %>
           <% grace_period = status&.grace_period? %>
           <td>
             <% if in_use || grace_period %>
-              <% if grace_period %>
+              <% if item.disabled? %>
+                <span class="badge rounded-pill text-bg-secondary fs-6 mb-2">利用停止中</span>
+              <% elsif grace_period %>
                 <span class="badge rounded-pill text-bg-warning fs-6 mb-2">🟠 猶予期間中</span>
               <% else %>
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
               <% end %>
               <div><span class="text-body-secondary">利用者:</span> <%= status.user.name %><%= '(自分)' if status.user_id == current_user.id %></div>
               <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
-              <% if grace_period %>
+              <% if grace_period && !item.disabled? %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
               <% end %>
             <% else %>
@@ -38,11 +40,13 @@
           </td>
           <% if in_use && status.user_id == current_user.id %>
             <td>
-              <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
-                <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
-                <span>まで</span>
-                <%= f.submit '延長する', class: 'btn btn-success' %>
+              <% unless item.disabled? %>
+                <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
+                  <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
+                  <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
+                  <span>まで</span>
+                  <%= f.submit '延長する', class: 'btn btn-success' %>
+                <% end %>
               <% end %>
               <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
                 <%= f.submit '利用終了', class: 'btn btn-primary' %>

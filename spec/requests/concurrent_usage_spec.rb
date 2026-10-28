@@ -35,6 +35,7 @@ RSpec.describe 'Concurrent item usage', type: :request do
     expect(users.map(&:id)).to include(item.reload.status.user_id)
   ensure
     workers&.each(&:join)
+    item&.reload&.status&.reset
     item&.destroy!
     users&.each(&:destroy!)
   end
