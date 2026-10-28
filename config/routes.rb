@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   post '/login', to: 'sessions#create'
   delete '/logout', to: 'sessions#destroy'
   get '/status', to: 'statuses#home'
+  post '/status/deadline_preview', to: 'statuses#deadline_preview', as: 'deadline_preview'
   post '/update_status/:id', to: 'statuses#update_status', as: 'update_status'
   post '/extend_status/:id', to: 'statuses#extend_status', as: 'extend_status'
   post '/end_use_status/:id', to: 'statuses#end_use_status', as: 'end_use_status'

@@ -40,7 +40,7 @@
             <td>
               <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
                 <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                <%= f.time_field :expires_at, id: "extend_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
                 <span>まで</span>
                 <%= f.submit '延長する', class: 'btn btn-success' %>
               <% end %>
@@ -54,7 +54,7 @@
             <td>
               <%= form_with url: update_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
                 <%= f.label :expires_at, '利用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                <%= f.time_field :expires_at, id: "update_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                <%= render 'deadline_field', f: f, field_id: "update_status_#{item.id}_expires_at", deadline: Time.current + 15.minutes %>
                 <span>まで</span>
                 <%= f.submit '利用する', class: 'btn btn-primary' %>
               <% end %>
@@ -65,3 +65,12 @@
     </tbody>
   </table>
 </div>
+
+<dialog id="deadline-confirmation" aria-labelledby="deadline-confirmation-title" class="border rounded p-4 shadow" data-preview-url="<%= deadline_preview_path %>">
+  <h2 id="deadline-confirmation-title" class="h4">日付をまたぐ利用の確認</h2>
+  <p data-confirmation-message class="alert alert-warning my-3"></p>
+  <form method="dialog" class="d-flex justify-content-end gap-2">
+    <button value="cancel" class="btn btn-outline-secondary" autofocus>戻る</button>
+    <button value="confirm" class="btn btn-primary">確定する</button>
+  </form>
+</dialog>

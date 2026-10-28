@@ -5,12 +5,18 @@ class StatusesController < ApplicationController
     @items = Item.all
   end
 
-  def update_status
-    if params[:expires_at].blank?
-      redirect_to status_path, notice: '期限を指定してください。'
-      return
-    end
+  def deadline_preview
+    expires_at = UsageDeadline.parse(params[:expires_at])
+    render json: {
+      confirmation_required: expires_at.to_date != Time.current.to_date,
+      expires_at: expires_at.iso8601,
+      label: "#{expires_at.to_date == Time.current.to_date.tomorrow ? '翌日 ' : ''}#{I18n.l(expires_at, format: '%m/%d(%a) %H:%M')}"
+    }
+  rescue UsageDeadline::Invalid => e
+    render json: { error: e.message }, status: :unprocessable_content
+  end
 
+  def update_status
     item = Item.find(params[:id])
     item.with_lock do
       if item.status.blank?
@@ -20,18 +26,18 @@ class StatusesController < ApplicationController
         return
       end
 
-      item.status.set(current_user.id, params[:expires_at].in_time_zone)
+      expires_at = UsageDeadline.parse(params[:expires_at])
+      return if confirm_overnight_usage(item, expires_at, :start)
+
+      item.status.set(current_user.id, expires_at)
     end
     post_slack(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: item.status.expires_at))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用します。"
+  rescue UsageDeadline::Invalid => e
+    redirect_to status_path, alert: e.message
   end
 
   def extend_status
-    if params[:expires_at].blank?
-      redirect_to status_path, notice: '期限を指定してください。'
-      return
-    end
-
     item = Item.find(params[:id])
     previous_expires_at = nil
     item.with_lock do
@@ -41,17 +47,24 @@ class StatusesController < ApplicationController
       elsif item.status.user_id != current_user.id
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
-      elsif params[:expires_at].in_time_zone <= item.status.expires_at
-        redirect_to status_path, notice: '利用期限以前の時刻は指定できません。'
+      end
+
+      expires_at = UsageDeadline.parse(params[:expires_at])
+      if expires_at <= item.status.expires_at
+        redirect_to status_path, alert: '利用期限以前の時刻は指定できません。'
         return
       end
 
+      return if confirm_overnight_usage(item, expires_at, :extend)
+
       previous_expires_at = item.status.expires_at
-      item.status.set(current_user.id, params[:expires_at].in_time_zone)
+      item.status.set(current_user.id, expires_at)
     end
     post_slack(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
                                           expires_at: item.status.expires_at, previous_expires_at: previous_expires_at))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用延長します。"
+  rescue UsageDeadline::Invalid => e
+    redirect_to status_path, alert: e.message
   end
 
   def end_use_status
@@ -72,6 +85,17 @@ class StatusesController < ApplicationController
   end
 
   private
+
+  def confirm_overnight_usage(item, expires_at, operation)
+    return false if expires_at.to_date == Time.current.to_date
+    return false if params[:confirmed_expires_at] == expires_at.iso8601
+
+    @item = item
+    @expires_at = expires_at
+    @operation = operation
+    render :confirm_deadline
+    true
+  end
 
   def post_slack(payload)
     webhook_url = ENV['SLACK_WEBHOOK_URL']

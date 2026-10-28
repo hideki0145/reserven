@@ -19,7 +19,8 @@ RSpec.describe 'Concurrent item usage', type: :request do
         ActiveRecord::Base.connection_pool.with_connection do
           ready << true
           start.pop
-          client.post update_status_path(item), params: { expires_at: 1.hour.from_now.iso8601 }
+          deadline = 1.hour.from_now.iso8601
+          client.post update_status_path(item), params: { expires_at: deadline, confirmed_expires_at: deadline }
           [client.response.status, client.request.flash[:notice]]
         end
       end

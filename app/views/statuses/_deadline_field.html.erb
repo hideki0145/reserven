@@ -1,0 +1,4 @@
+<div data-deadline-field data-now="<%= (Time.current.to_f * 1000).to_i %>">
+  <%= f.time_field :expires_at, id: field_id, class: 'form-control w-auto', value: deadline.strftime('%H:%M'), required: true, aria: { describedby: "#{field_id}_day" } %>
+  <span id="<%= field_id %>_day" class="small text-body-secondary" data-deadline-day aria-live="polite"><%= deadline.to_date == Time.current.to_date ? '本日' : '翌日' %></span>
+</div>

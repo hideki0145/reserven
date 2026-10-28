@@ -39,3 +39,11 @@
   --bs-btn-disabled-bg: #28a745;
   --bs-btn-disabled-border-color: #28a745;
 }
+
+#deadline-confirmation {
+  width: min(34rem, calc(100% - 2rem));
+}
+
+#deadline-confirmation::backdrop {
+  background: rgb(0 0 0 / 45%);
+}

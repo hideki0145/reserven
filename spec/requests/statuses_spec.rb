@@ -30,9 +30,104 @@ RSpec.describe 'Item usage', type: :request do
     expect(item.status.reload.use_flg).to be(false)
   end
 
+  it 'previews an overnight deadline without writing or sending notifications' do
+    expect do
+      post deadline_preview_path, params: { expires_at: '00:10' }
+    end.not_to change(Status, :count)
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('confirmation_required' => true, 'label' => '翌日 10/28(水) 00:10')
+    post deadline_preview_path, params: { expires_at: 'invalid' }
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
+  end
+
   it 'rejects an empty deadline' do
     expect { post update_status_path(item), params: { expires_at: '' } }.not_to change(Status, :count)
-    expect(flash[:notice]).to eq('期限を指定してください。')
+    expect(flash[:alert]).to eq('期限を指定してください。')
+  end
+
+  it 'requires confirmation before starting usage tomorrow, then saves and notifies once' do
+    travel_to(Time.zone.local(2026, 10, 27, 23, 55))
+    deadline = Time.zone.local(2026, 10, 28, 0, 10)
+    webhook_url = 'https://hooks.slack.com/services/TEST/CHANNEL/SECRET'
+    allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)
+    notification = stub_request(:post, webhook_url).to_return(status: 200, body: 'ok')
+
+    expect { post update_status_path(item), params: { expires_at: '00:10' } }.not_to change(Status, :count)
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include('日付をまたぐ利用の確認', '翌日 10/28(水) 00:10')
+    expect(notification).not_to have_been_requested
+
+    post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: deadline.iso8601 }
+    expect(item.reload.status.expires_at).to eq(deadline)
+    expect(notification).to have_been_requested.once
+  end
+
+  it 'does not extend usage until an overnight deadline is confirmed' do
+    travel_to(Time.zone.local(2026, 10, 27, 23, 30))
+    status = reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 55))
+    post extend_status_path(item), params: { expires_at: '00:10' }
+    expect(response.body).to include('日付をまたぐ利用の確認')
+    expect(status.reload.expires_at).to eq(Time.zone.local(2026, 10, 27, 23, 55))
+    deadline = Time.zone.local(2026, 10, 28, 0, 10)
+    post extend_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: deadline.iso8601 }
+    expect(status.reload.expires_at).to eq(deadline)
+  end
+
+  it 'rechecks availability after a confirmation page was displayed' do
+    travel_to(Time.zone.local(2026, 10, 27, 23, 55))
+    post update_status_path(item), params: { expires_at: '00:10' }
+    status = reserve(owner: other_user, expires_at: 30.minutes.from_now)
+    post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: Time.zone.local(2026, 10, 28, 0, 10).iso8601 }
+    expect(response).to redirect_to(status_path)
+    expect(status.reload.user).to eq(other_user)
+  end
+
+  it 'asks for confirmation again if the deadline changed while the page was open' do
+    travel_to(Time.zone.local(2026, 10, 27, 23, 55))
+    old_deadline = Time.zone.local(2026, 10, 28, 0, 10)
+    post update_status_path(item), params: { expires_at: '00:10' }
+    travel_to(Time.zone.local(2026, 10, 28, 0, 20))
+    expect do
+      post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: old_deadline.iso8601 }
+    end.not_to change(Status, :count)
+    expect(response.body).to include('翌日 10/29(木) 00:10')
+  end
+
+  it 'rejects malformed and explicit past deadlines without creating usage or notifying Slack' do
+    allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return('https://hooks.slack.com/services/TEST/CHANNEL/SECRET')
+    ['invalid', '24:00', '12:00', '2026-10-27T11:00', '2026-10-27T12:00'].each do |deadline|
+      expect { post update_status_path(item), params: { expires_at: deadline } }.not_to change(Status, :count)
+      expect(response).to redirect_to(status_path)
+      expect(flash[:alert]).to be_present
+    end
+    expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
+  end
+
+  it 'preserves existing usage when an extension is invalid or already past' do
+    status = reserve(expires_at: 30.minutes.ago)
+    ['invalid', '2026-10-27T11:45', '2026-10-27T12:00'].each do |deadline|
+      post extend_status_path(item), params: { expires_at: deadline }
+      expect(response).to redirect_to(status_path)
+      expect(status.reload.expires_at).to eq(30.minutes.ago)
+      expect(flash[:alert]).to be_present
+    end
+  end
+
+  it 'provides time-only input and defaults an extension after the existing deadline' do
+    reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 55))
+    get status_path
+    input = Nokogiri::HTML(response.body).at_css('input[name="expires_at"]')
+    expect(input['type']).to eq('time')
+    expect(input['value']).to eq('00:10')
+    expect(response.body).to include('翌日')
+    expect(response.body).not_to include('日本時間')
+  end
+
+  it 'defaults expired usage extensions to fifteen minutes from now' do
+    reserve(expires_at: 5.minutes.ago)
+    get status_path
+    expect(Nokogiri::HTML(response.body).at_css('input[name="expires_at"]')['value']).to eq('12:15')
   end
 
   it 'rejects taking an item already in use by another user' do
@@ -65,10 +160,10 @@ RSpec.describe 'Item usage', type: :request do
 
   it 'rejects extending to an equal or earlier deadline' do
     status = reserve
-    %w[12:30 12:00].each do |deadline|
+    ['2026-10-27T12:30', '2026-10-27T12:15'].each do |deadline|
       post extend_status_path(item), params: { expires_at: deadline }
       expect(status.reload.expires_at).to eq(30.minutes.from_now)
-      expect(flash[:notice]).to eq('利用期限以前の時刻は指定できません。')
+      expect(flash[:alert]).to eq('利用期限以前の時刻は指定できません。')
     end
   end
 
@@ -156,10 +251,10 @@ RSpec.describe 'Item usage', type: :request do
             payload = JSON.parse(request.body)
             payload['text'] == text && payload['blocks'] == [
               { 'type' => 'section', 'text' => { 'type' => 'mrkdwn', 'text' => title, 'verbatim' => true } },
-              { 'type' => 'section', 'fields' => [
-                { 'type' => 'mrkdwn', 'text' => "*利用者*: #{user.name}", 'verbatim' => true },
-                { 'type' => 'mrkdwn', 'text' => "*#{label}*: #{value}", 'verbatim' => true }
-              ] }
+              { 'type' => 'section', 'text' => {
+                'type' => 'mrkdwn', 'verbatim' => true,
+                'text' => title.include?('利用を延長') ? "*利用者*: #{user.name}\n*変更前*: 10/27(火) 12:30\n*利用期限*: 10/27(火) 13:00" : "*利用者*: #{user.name}\n*#{label}*: #{value}"
+              } }
             ]
           end
           .to_return(status: 200, body: 'ok')
@@ -174,9 +269,9 @@ RSpec.describe 'Item usage', type: :request do
       reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 30))
       notification = stub_request(:post, webhook_url).with do |request|
         payload = JSON.parse(request.body)
-        payload['blocks'][1]['fields'][1]['text'] == "*利用期限*: 10/27(火) 23:30 → 10/28(水) 00:30"
+        payload['blocks'][1]['text']['text'] == "*利用者*: #{user.name}\n*変更前*: 10/27(火) 23:30\n*利用期限*: 10/28(水) 00:30"
       end.to_return(status: 200, body: 'ok')
-      post extend_status_path(item), params: { expires_at: '2026-10-28 00:30' }
+      post extend_status_path(item), params: { expires_at: '2026-10-28 00:30', confirmed_expires_at: Time.zone.local(2026, 10, 28, 0, 30).iso8601 }
       expect(notification).to have_been_requested.once
     end
 
@@ -186,7 +281,7 @@ RSpec.describe 'Item usage', type: :request do
       notification = stub_request(:post, webhook_url).with do |request|
         blocks = JSON.parse(request.body)['blocks']
         blocks[0]['text']['text'] == '🔵 *PC &amp; &lt;!channel&gt; の利用を開始*' &&
-          blocks[1]['fields'][0]['text'] == "*利用者*: &lt;管理者&gt; &amp; Co."
+          blocks[1]['text']['text'] == "*利用者*: &lt;管理者&gt; &amp; Co.\n*利用期限*: 10/27(火) 12:30"
       end.to_return(status: 200, body: 'ok')
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(notification).to have_been_requested.once

@@ -2,6 +2,7 @@ require 'rails_helper'
 
 RSpec.describe 'Browser usage', type: :system do
   it 'logs in, starts and ends usage, then logs out' do
+    travel_to(Time.zone.local(2026, 10, 28, 19, 30))
     user = create_user
     Item.create!(name: '会議室')
     login(user)
@@ -15,6 +16,8 @@ RSpec.describe 'Browser usage', type: :system do
     expect(page).to have_css('.badge', text: '✅ 利用可能')
     click_button 'ログアウト'
     expect(page).to have_current_path(login_path)
+  ensure
+    travel_back
   end
 
   it 'shows usage states and weekday deadlines on a narrow screen' do
@@ -72,5 +75,74 @@ RSpec.describe 'Browser usage', type: :system do
     expect(page).to have_content('アイテム一覧')
     click_button 'ログアウト'
     expect(page).to have_current_path(login_path)
+  end
+end
+
+RSpec.describe 'Deadline entry', type: :system do
+  around do |example|
+    travel_to(Time.zone.local(2026, 10, 28, 19, 30)) { example.run }
+  end
+
+  it 'uses time-only input and updates the day hint for input and change events' do
+    Item.create!(name: '時刻入力のPC')
+    login(create_user)
+    expect(find('input[name="expires_at"]')[:type]).to eq('time')
+    fill_in '利用期限', with: '00:10'
+    expect(page).to have_css('[data-deadline-day]', exact_text: '翌日')
+    fill_in '利用期限', with: '20:00'
+    expect(page).to have_css('[data-deadline-day]', exact_text: '本日')
+    # The driver dispatches a non-bubbling input event for Time values, followed by change.
+    fill_in '利用期限', with: Time.zone.local(2026, 10, 28, 18)
+    expect(page).to have_css('[data-deadline-day]', exact_text: '翌日')
+  end
+
+  it 'starts and extends across midnight only after confirmation, and supports returning' do
+    travel_to(Time.zone.local(2026, 10, 28, 23, 55))
+    item = Item.create!(name: '日付またぎのPC')
+    login(create_user)
+    expect(find('input[name="expires_at"]').value).to eq('00:10')
+    expect(page).to have_css('[data-deadline-day]', exact_text: '翌日')
+    click_button '利用する'
+    expect(page).to have_content('翌日 10/29(木) 00:10')
+    expect(item.reload.status).to be_nil
+    expect(page).to have_css('dialog[open]')
+    expect(page).to have_current_path(root_path)
+    expect(find('dialog[open]')).not_to have_content('日本時間')
+    page.current_window.resize_to(390, 844)
+    expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
+    find('dialog[open]').send_keys(:escape)
+    expect(page).not_to have_css('dialog[open]')
+    expect(item.reload.status).to be_nil
+    click_button '利用する'
+    click_button '戻る'
+    expect(page).not_to have_css('dialog[open]')
+    expect(page).to have_css('.badge', text: '✅ 利用可能')
+    click_button '利用する'
+    click_button '確定する'
+    expect(page).to have_content('利用期限: 10/29(木) 00:10')
+    expect(find('input[name="expires_at"]').value).to eq('00:25')
+    click_button '延長する'
+    expect(page).to have_content('翌日 10/29(木) 00:25')
+    expect(item.reload.status.expires_at).to eq(Time.zone.local(2026, 10, 29, 0, 10))
+    click_button '確定する'
+    expect(page).to have_content('利用期限: 10/29(木) 00:25')
+  end
+
+  it 'starts same-day usage without confirmation' do
+    item = Item.create!(name: '当日利用のPC')
+    login(create_user)
+    fill_in '利用期限', with: '20:00'
+    click_button '利用する'
+    expect(page).to have_content('利用期限: 10/28(水) 20:00')
+    expect(item.reload.status.expires_at).to eq(Time.zone.local(2026, 10, 28, 20))
+  end
+
+  it 'rejects the current time without changing availability' do
+    Item.create!(name: '入力確認のPC')
+    login(create_user)
+    fill_in '利用期限', with: '19:30'
+    click_button '利用する'
+    expect(page).to have_css('.alert-danger', text: '現在と同じ時刻は指定できません。')
+    expect(page).to have_css('.badge', text: '✅ 利用可能')
   end
 end

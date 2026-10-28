@@ -21,14 +21,20 @@ class SlackUsageNotification
       raise ArgumentError, "Unknown usage event: #{event}"
     end
 
+    lines = ["*利用者*: #{escape(user.name)}"]
+    if event == :extend
+      lines << "*変更前*: #{deadline(previous_expires_at)}"
+      lines << "*利用期限*: #{deadline(expires_at)}"
+    else
+      lines << "*#{label}*: #{value}"
+    end
+    details = { type: 'section', text: { type: 'mrkdwn', text: lines.join("\n"), verbatim: true } }
+
     {
       text: text,
       blocks: [
         { type: 'section', text: { type: 'mrkdwn', text: emphasize(title), verbatim: true } },
-        { type: 'section', fields: [
-          { type: 'mrkdwn', text: "*利用者*: #{escape(user.name)}", verbatim: true },
-          { type: 'mrkdwn', text: "*#{label}*: #{value}", verbatim: true }
-        ] }
+        details
       ]
     }
   end

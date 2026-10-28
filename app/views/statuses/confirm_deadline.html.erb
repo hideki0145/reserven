@@ -1,0 +1,15 @@
+<h1>日付をまたぐ利用の確認</h1>
+
+<div class="alert alert-warning">
+  <strong><%= @item.name %></strong>の利用期限は、
+  <strong><%= @expires_at.to_date == Time.current.to_date.tomorrow ? '翌日 ' : '' %><%= l @expires_at, format: '%m/%d(%a) %H:%M' %></strong>です。
+  <div>この日時まで<%= @operation == :start ? '利用' : '延長' %>します。よろしいですか？</div>
+</div>
+
+<% destination = @operation == :start ? update_status_path(id: @item.id) : extend_status_path(id: @item.id) %>
+<%= form_with url: destination, local: true, class: 'd-flex flex-wrap gap-2' do |f| %>
+  <%= f.hidden_field :expires_at, value: params[:expires_at] %>
+  <%= f.hidden_field :confirmed_expires_at, value: @expires_at.iso8601 %>
+  <%= f.submit '確定する', class: 'btn btn-primary' %>
+  <%= link_to '戻る', status_path, class: 'btn btn-outline-secondary' %>
+<% end %>
