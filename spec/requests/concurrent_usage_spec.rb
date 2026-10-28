@@ -29,7 +29,7 @@ RSpec.describe 'Concurrent item usage', type: :request do
     results = workers.map(&:value)
 
     expect(results.map(&:first)).to eq([302, 302])
-    expect(results.count { |_, notice| notice.include?('既に使用中') }).to eq(1)
+    expect(results.count { |_, notice| notice.include?('既に利用中') }).to eq(1)
     expect(Status.where(item: item).count).to eq(1)
     expect(users.map(&:id)).to include(item.reload.status.user_id)
   ensure

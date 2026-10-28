@@ -16,14 +16,14 @@ class StatusesController < ApplicationController
       if item.status.blank?
         item.build_status
       elsif item.status.use?(current_user.id) || item.status.grace_period?
-        redirect_to status_path, notice: "#{item.name}は既に使用中です。"
+        redirect_to status_path, notice: "#{item.name}は既に利用中です。"
         return
       end
 
       item.status.set(current_user.id, params[:expires_at].in_time_zone)
     end
-    post_slack("#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 #{current_user.name}さんが使用します。")
-    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 使用します。"
+    post_slack(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: item.status.expires_at))
+    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用します。"
   end
 
   def extend_status
@@ -33,22 +33,25 @@ class StatusesController < ApplicationController
     end
 
     item = Item.find(params[:id])
+    previous_expires_at = nil
     item.with_lock do
       if item.status.blank? || !item.status.use_flg?
-        redirect_to status_path, notice: "#{item.name}は使用中ではありません。"
+        redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
       elsif item.status.user_id != current_user.id
-        redirect_to status_path, notice: "#{item.name}は自分が使用中ではありません。"
+        redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       elsif params[:expires_at].in_time_zone <= item.status.expires_at
-        redirect_to status_path, notice: '使用期限以前の時刻は指定できません。'
+        redirect_to status_path, notice: '利用期限以前の時刻は指定できません。'
         return
       end
 
+      previous_expires_at = item.status.expires_at
       item.status.set(current_user.id, params[:expires_at].in_time_zone)
     end
-    post_slack("#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 #{current_user.name}さんが使用延長しました。")
-    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 使用延長します。"
+    post_slack(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
+                                          expires_at: item.status.expires_at, previous_expires_at: previous_expires_at))
+    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用延長します。"
   end
 
   def end_use_status
@@ -56,25 +59,24 @@ class StatusesController < ApplicationController
     item.with_lock do
       status = item.status
       if status.nil? || !status.use_flg?
-        redirect_to status_path, notice: "#{item.name}は使用中ではありません。"
+        redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
       elsif status.user_id != current_user.id
-        redirect_to status_path, notice: "#{item.name}は自分が使用中ではありません。"
+        redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end
       status.reset
     end
-    post_slack("#{item.name}を#{current_user.name}さんが使用終了しました。")
-    redirect_to status_path, notice: "#{item.name}を使用終了しました。"
+    post_slack(SlackUsageNotification.build(event: :end, item: item, user: current_user))
+    redirect_to status_path, notice: "#{item.name}を利用終了しました。"
   end
 
   private
 
-  def post_slack(text)
-    post_text = text.to_s
+  def post_slack(payload)
     webhook_url = ENV['SLACK_WEBHOOK_URL']
-    if webhook_url.blank? || post_text.blank?
-      logger.debug post_text
+    if webhook_url.blank?
+      logger.debug { "Slack通知スキップ(Webhook未設定): #{payload[:text]}" }
       return
     end
 
@@ -90,7 +92,7 @@ class StatusesController < ApplicationController
     http.read_timeout = 5
     req = Net::HTTP::Post.new(uri.request_uri)
     req['Content-Type'] = 'application/json'
-    req.body = { text: post_text }.to_json
+    req.body = payload.to_json
     response = http.request(req)
     logger.warn "Slack notification failed (HTTP #{response.code})" unless response.is_a?(Net::HTTPSuccess)
   rescue URI::InvalidURIError, Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError => e

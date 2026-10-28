@@ -4,7 +4,7 @@
 
 <div class="mb-3"></div>
 <p class="small text-body-secondary d-md-none">表は横にスクロールできます。</p>
-<div class="table-responsive">
+<div class="table-responsive position-relative">
   <table class="table table-hover text-nowrap align-middle" data-auto-refresh>
     <thead class="table-light">
       <tr>
@@ -16,39 +16,47 @@
     <tbody>
       <% @items.each do |item| %>
         <tr>
-          <td><%= item.name %></td>
-          <% if item.status&.use?(current_user.id) %>
-            <% if item.status.user_id == current_user.id %>
-              <td><%= "自分が[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
-              <td>
-                <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
-                  <%= f.label :expires_at, '延長後の使用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                  <%= f.time_field :expires_at, id: "extend_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
-                  <span>まで</span>
-                  <%= f.submit '延長する', class: 'btn btn-success' %>
-                <% end %>
-                <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
-                  <%= f.submit '使用終了', class: 'btn btn-primary' %>
-                <% end %>
-              </td>
+          <td class="fw-semibold"><%= item.name %></td>
+          <% status = item.status %>
+          <% in_use = status&.use?(current_user.id) %>
+          <% grace_period = status&.grace_period? %>
+          <td>
+            <% if in_use || grace_period %>
+              <% if grace_period %>
+                <span class="badge rounded-pill text-bg-warning fs-6 mb-2">🟠 猶予期間中</span>
+              <% else %>
+                <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
+              <% end %>
+              <div><span class="text-body-secondary">利用者:</span> <%= status.user.name %><%= '(自分)' if status.user_id == current_user.id %></div>
+              <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
+              <% if grace_period %>
+                <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
+              <% end %>
             <% else %>
-              <td><%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
-              <td></td>
+              <span class="badge rounded-pill text-bg-light border fs-6">✅ 利用可能</span>
             <% end %>
-          <% elsif item.status&.grace_period? %>
+          </td>
+          <% if in_use && status.user_id == current_user.id %>
             <td>
-              <%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %><br>
-              <%= "(15分の猶予期間中)" %>
+              <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
+                <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
+                <%= f.time_field :expires_at, id: "extend_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                <span>まで</span>
+                <%= f.submit '延長する', class: 'btn btn-success' %>
+              <% end %>
+              <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
+                <%= f.submit '利用終了', class: 'btn btn-primary' %>
+              <% end %>
             </td>
+          <% elsif in_use || grace_period %>
             <td></td>
           <% else %>
-            <td>未使用</td>
             <td>
               <%= form_with url: update_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
-                <%= f.label :expires_at, '使用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
+                <%= f.label :expires_at, '利用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
                 <%= f.time_field :expires_at, id: "update_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
                 <span>まで</span>
-                <%= f.submit '使用する', class: 'btn btn-primary' %>
+                <%= f.submit '利用する', class: 'btn btn-primary' %>
               <% end %>
             </td>
           <% end %>

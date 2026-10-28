@@ -39,7 +39,7 @@ RSpec.describe 'Item usage', type: :request do
     status = reserve(owner: other_user)
     post update_status_path(item), params: { expires_at: '13:00' }
     expect(status.reload.user).to eq(other_user)
-    expect(flash[:notice]).to include('既に使用中')
+    expect(flash[:notice]).to include('既に利用中')
   end
 
   it 'rejects taking an item during its grace period' do
@@ -60,7 +60,7 @@ RSpec.describe 'Item usage', type: :request do
     expect(status.reload.expires_at).to eq(30.minutes.from_now)
     post end_use_status_path(item)
     expect(status.reload.use_flg).to be(true)
-    expect(flash[:notice]).to include('自分が使用中ではありません')
+    expect(flash[:notice]).to include('自分が利用中ではありません')
   end
 
   it 'rejects extending to an equal or earlier deadline' do
@@ -68,14 +68,14 @@ RSpec.describe 'Item usage', type: :request do
     %w[12:30 12:00].each do |deadline|
       post extend_status_path(item), params: { expires_at: deadline }
       expect(status.reload.expires_at).to eq(30.minutes.from_now)
-      expect(flash[:notice]).to eq('使用期限以前の時刻は指定できません。')
+      expect(flash[:notice]).to eq('利用期限以前の時刻は指定できません。')
     end
   end
 
   it 'handles ending or extending an unused item' do
     post end_use_status_path(item)
     expect(response).to redirect_to(status_path)
-    expect(flash[:notice]).to include('使用中ではありません')
+    expect(flash[:notice]).to include('利用中ではありません')
     post extend_status_path(item), params: { expires_at: '13:00' }
     expect(response).to redirect_to(status_path)
     status = reserve(use_flg: false)
@@ -87,15 +87,49 @@ RSpec.describe 'Item usage', type: :request do
     reserve
     get status_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('data-auto-refresh', '自分が', '延長する', '使用終了')
+    expect(response.body).to include('data-auto-refresh', '🔵 利用中', '(自分)', '10/27(火) 12:30', '延長する', '利用終了')
+  end
+
+  it 'shows availability without stale usage details after usage ends' do
+    reserve(use_flg: false)
+    get status_path
+    expect(response.body).to include('✅ 利用可能', '利用する')
+    expect(response.body).not_to include('利用期限:', '延長する', '利用終了')
+  end
+
+  [true, false].each do |own_usage|
+    it "shows the grace period and preserves actions for own_usage=#{own_usage}" do
+      reserve(owner: own_usage ? user : other_user, expires_at: 5.minutes.ago)
+      get status_path
+      expect(response.body).to include('🟠 猶予期間中', '期限後15分', '10/27(火) 11:55')
+      if own_usage
+        expect(response.body).to include('延長する', '利用終了')
+      else
+        expect(response.body).not_to include('延長する', '利用終了', 'value="利用する"')
+      end
+    end
+  end
+
+  it 'shows availability after another user’s grace period ends' do
+    reserve(owner: other_user, expires_at: 15.minutes.ago)
+    get status_path
+    expect(response.body).to include('✅ 利用可能', '利用する')
+    expect(response.body).not_to include('猶予期間中', '利用期限:')
   end
 
   [nil, '', ' '].each do |webhook_url|
     it "skips Slack notifications when the webhook URL is #{webhook_url.inspect}" do
       allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)
+      debug_messages = []
+      allow(Rails.logger).to receive(:debug) do |*args, &message|
+        debug_messages << (message ? message.call : args.first)
+      end
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(response).to redirect_to(status_path)
       expect(item.reload.status.use_flg).to be(true)
+      expect(debug_messages).to include(
+        "Slack通知スキップ(Webhook未設定): #{item.name}を#{user.name}さんが10/27(火) 12:30まで利用します。"
+      )
       expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
     end
   end
@@ -108,20 +142,54 @@ RSpec.describe 'Item usage', type: :request do
     end
 
     it 'posts notifications for starting, extending and ending usage' do
-      texts = [
-        "#{item.name}を[#{I18n.l Time.zone.local(2026, 10, 27, 12, 30), format: :short}]迄 #{user.name}さんが使用します。",
-        "#{item.name}を[#{I18n.l Time.zone.local(2026, 10, 27, 13), format: :short}]迄 #{user.name}さんが使用延長しました。",
-        "#{item.name}を#{user.name}さんが使用終了しました。"
+      expected = [
+        ["🔵 *#{item.name} の利用を開始*", '利用期限', '10/27(火) 12:30',
+         "#{item.name}を#{user.name}さんが10/27(火) 12:30まで利用します。"],
+        ["🕒 *#{item.name} の利用を延長*", '利用期限', '10/27(火) 12:30 → 13:00',
+         "#{item.name}の利用期限を#{user.name}さんが10/27(火) 12:30 → 13:00に延長しました。"],
+        ["✅ *#{item.name} の利用を終了*", '状態', '利用可能',
+         "#{item.name}を#{user.name}さんが利用終了しました。現在は利用可能です。"]
       ]
-      notifications = texts.map do |text|
+      notifications = expected.map do |title, label, value, text|
         stub_request(:post, webhook_url)
-          .with(headers: { 'Content-Type' => 'application/json' }, body: { text: text }.to_json)
+          .with(headers: { 'Content-Type' => 'application/json' }) do |request|
+            payload = JSON.parse(request.body)
+            payload['text'] == text && payload['blocks'] == [
+              { 'type' => 'section', 'text' => { 'type' => 'mrkdwn', 'text' => title, 'verbatim' => true } },
+              { 'type' => 'section', 'fields' => [
+                { 'type' => 'mrkdwn', 'text' => "*利用者*: #{user.name}", 'verbatim' => true },
+                { 'type' => 'mrkdwn', 'text' => "*#{label}*: #{value}", 'verbatim' => true }
+              ] }
+            ]
+          end
           .to_return(status: 200, body: 'ok')
       end
       post update_status_path(item), params: { expires_at: '12:30' }
       post extend_status_path(item), params: { expires_at: '13:00' }
       post end_use_status_path(item)
       notifications.each { |notification| expect(notification).to have_been_requested.once }
+    end
+
+    it 'shows both dates when an extension crosses midnight' do
+      reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 30))
+      notification = stub_request(:post, webhook_url).with do |request|
+        payload = JSON.parse(request.body)
+        payload['blocks'][1]['fields'][1]['text'] == "*利用期限*: 10/27(火) 23:30 → 10/28(水) 00:30"
+      end.to_return(status: 200, body: 'ok')
+      post extend_status_path(item), params: { expires_at: '2026-10-28 00:30' }
+      expect(notification).to have_been_requested.once
+    end
+
+    it 'escapes Slack control characters in item and user names' do
+      item.update!(name: 'PC & <!channel>')
+      user.update!(name: '<管理者> & Co.')
+      notification = stub_request(:post, webhook_url).with do |request|
+        blocks = JSON.parse(request.body)['blocks']
+        blocks[0]['text']['text'] == '🔵 *PC &amp; &lt;!channel&gt; の利用を開始*' &&
+          blocks[1]['fields'][0]['text'] == "*利用者*: &lt;管理者&gt; &amp; Co."
+      end.to_return(status: 200, body: 'ok')
+      post update_status_path(item), params: { expires_at: '12:30' }
+      expect(notification).to have_been_requested.once
     end
 
     it 'keeps the successful reservation when Slack times out' do
