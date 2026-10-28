@@ -182,7 +182,7 @@ RSpec.describe 'Item usage', type: :request do
     reserve
     get status_path
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include('data-auto-refresh', '🔵 利用中', '(自分)', '10/27(火) 12:30', '延長する', '利用終了')
+    expect(response.body).to include('最終更新:', 'data-refresh-status', 'data-refresh-paused', 'data-auto-refresh', '🔵 利用中', '(自分)', '10/27(火) 12:30', '延長する', '利用終了')
   end
 
   it 'shows availability without stale usage details after usage ends' do

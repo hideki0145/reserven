@@ -4,11 +4,27 @@ document.addEventListener('submit', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.querySelector('[data-auto-refresh]')) {
-    window.setInterval(() => {
-      if (!document.querySelector('dialog[open]')) window.location.reload();
-    }, 600000);
-  }
+  if (!document.querySelector('[data-auto-refresh]')) return;
+
+  const fields = Array.from(document.querySelectorAll('[data-deadline-field] input'));
+  const hasChanges = () => fields.some(field => field.value !== field.defaultValue);
+  const notice = document.querySelector('[data-refresh-paused]');
+  const updateNotice = () => { notice.hidden = !hasChanges(); };
+  document.addEventListener('input', updateNotice);
+  document.addEventListener('change', updateNotice);
+  updateNotice();
+
+  window.setInterval(() => {
+    const busy = fields.some(field => deadlineSubmissions.has(field.form));
+    if (!hasChanges() && !busy && !document.querySelector('dialog[open]')) window.location.reload();
+  }, 600000);
+
+  document.querySelector('[data-refresh-status]').addEventListener('click', (event) => {
+    event.preventDefault();
+    if (!hasChanges() || window.confirm('入力中の時刻を破棄して、利用状況を更新します。よろしいですか？')) {
+      window.location.reload();
+    }
+  });
 });
 
 // Anchor the preview to server time so it also works with a different browser timezone.
