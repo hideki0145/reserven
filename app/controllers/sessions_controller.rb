@@ -11,7 +11,8 @@ class SessionsController < ApplicationController
       session_params[:remember_cookies] == '1' ? store_remember_cookies(user) : release_remember_cookies(user)
       redirect_to root_path, notice: 'ログインしました。'
     else
-      render :new
+      flash.now[:alert] = 'メールアドレスまたはパスワードが正しくありません。'
+      render :new, status: :unprocessable_content
     end
   end
 

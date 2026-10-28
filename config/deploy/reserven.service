@@ -1,0 +1,20 @@
+[Unit]
+Description=Reserven Rails application
+After=network.target
+
+[Service]
+Type=simple
+User=reserven
+Group=reserven
+WorkingDirectory=/srv/reserven/current
+EnvironmentFile=/etc/reserven.env
+# Adjust these paths to the Ruby installation on your server.
+Environment=PATH=/opt/ruby/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/ruby/bin/bundle exec puma -C config/puma.rb --bind tcp://127.0.0.1:3000
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

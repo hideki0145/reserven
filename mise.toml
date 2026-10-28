@@ -1,0 +1,25 @@
+[tools]
+ruby = "4.0.9"
+# Node.js is used only for Playwright browser tests.
+node = "24.22.1"
+
+[tasks.ci]
+description = "Run setup, Playwright tests, autoload checks, and asset compilation"
+run = "bin/ci"
+
+[tasks.playwright_install]
+description = "Install the Playwright CLI and Chromium"
+run = ["npm ci", "bin/playwright install chromium"]
+
+[tasks.playwright_install_with_deps]
+description = "Install Playwright, Chromium, and Linux browser dependencies"
+run = ["npm ci", "bin/playwright install --with-deps chromium"]
+
+[tasks.spec]
+description = "Run all RSpec tests"
+run = "bundle exec rspec"
+
+[tasks.spec_headful]
+description = "Run browser tests with a visible Chromium window"
+env.PLAYWRIGHT_HEADFUL = "1"
+run = "bundle exec rspec spec/system"

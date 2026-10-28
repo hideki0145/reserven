@@ -1,10 +1,14 @@
 class ApplicationController < ActionController::Base
+  # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
+  allow_browser versions: :modern
+
   helper_method :current_user
   before_action :login_required
 
   private
 
   def log_in(user)
+    reset_session
     session[:user_id] = user.id
   end
 
@@ -16,8 +20,9 @@ class ApplicationController < ActionController::Base
 
   def store_remember_cookies(user)
     user.create_remember_digest
-    cookies.permanent.signed[:user_id] = user.id
-    cookies.permanent[:remember_token] = user.remember_token
+    cookie_options = { httponly: true, same_site: :lax, secure: Rails.env.production? }
+    cookies.permanent.signed[:user_id] = cookie_options.merge(value: user.id)
+    cookies.permanent[:remember_token] = cookie_options.merge(value: user.remember_token)
   end
 
   def release_remember_cookies(user)
