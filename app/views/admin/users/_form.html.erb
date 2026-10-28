@@ -19,6 +19,11 @@
     <%= f.check_box :admin, class: 'form-check-input' %>
     <%= f.label :admin, '管理者権限', class: 'form-check-label' %>
   </div>
+  <div class="form-check mb-3">
+    <%= f.check_box :disabled, class: 'form-check-input' %>
+    <%= f.label :disabled, 'アカウント無効', class: 'form-check-label' %>
+    <div class="form-text">無効にするとログインできなくなります。利用状況は保持されます。</div>
+  </div>
   <div class="mb-3">
     <%= f.label :password, 'パスワード', class: 'form-label' %>
     <%= f.password_field :password, class: 'form-control' %>
@@ -27,5 +32,5 @@
     <%= f.label :password_confirmation, 'パスワード(確認)', class: 'form-label' %>
     <%= f.password_field :password_confirmation, class: 'form-control' %>
   </div>
-  <%= f.submit '登録する', class: 'btn btn-primary' %>
+  <%= f.submit(user.persisted? ? '更新する' : '登録する', class: 'btn btn-primary') %>
 <% end %>

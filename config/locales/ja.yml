@@ -1,4 +1,7 @@
 ja:
+  time:
+    formats:
+      timestamp: '%Y/%m/%d %H:%M:%S'
   activerecord:
     models:
       user: ユーザ
@@ -10,6 +13,7 @@ ja:
         name: 名前
         email: メールアドレス
         admin: 管理者権限
+        disabled: アカウント無効
         password: パスワード
         password_confirmation: パスワード(確認)
         created_at: 登録日時

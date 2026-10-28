@@ -10,7 +10,8 @@
       <tr>
         <th><%= User.human_attribute_name(:name) %></th>
         <th><%= User.human_attribute_name(:email) %></th>
-        <th><%= User.human_attribute_name(:admin) %></th>
+        <th class="text-center"><%= User.human_attribute_name(:admin) %></th>
+        <th class="text-center">アカウント</th>
         <th><%= User.human_attribute_name(:created_at) %></th>
         <th><%= User.human_attribute_name(:updated_at) %></th>
         <th></th>
@@ -21,9 +22,10 @@
         <tr>
           <td><%= link_to user.name, [:admin, user] %></td>
           <td><%= user.email %></td>
-          <td><%= user.admin? ? '○' : '×' %></td>
-          <td><%= user.created_at %></td>
-          <td><%= user.updated_at %></td>
+          <td class="text-center"><%= user.admin? ? '○' : '×' %></td>
+          <td class="text-center"><span class="badge <%= user.disabled? ? 'text-bg-secondary' : 'text-bg-success' %>"><%= user.disabled? ? '無効' : '有効' %></span></td>
+          <td><%= l user.created_at, format: :timestamp %></td>
+          <td><%= l user.updated_at, format: :timestamp %></td>
           <td>
             <%= link_to '編集', edit_admin_user_path(user), class: 'btn btn-primary me-3' %>
             <%= button_to '削除', [:admin, user], method: :delete, form: { class: 'd-inline', data: { confirm: "ユーザ「#{user.name}」を削除します。よろしいですか？" } }, class: 'btn btn-danger' %>

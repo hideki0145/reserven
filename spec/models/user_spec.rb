@@ -31,3 +31,17 @@ RSpec.describe User, type: :model do
     expect { user.destroy! }.to change(Status, :count).by(-1)
   end
 end
+
+RSpec.describe 'Last active administrator protection', type: :model do
+  it 'rejects direct model changes and keeps dependent usage intact on rejected deletion' do
+    admin = create_user(admin: true)
+    item = Item.create!(name: 'PC')
+    status = Status.create!(item: item, user: admin, use_flg: true, expires_at: 1.hour.from_now)
+    expect(admin.update(admin: false)).to be(false)
+    admin.reload
+    expect(admin.update(disabled: true)).to be(false)
+    admin.reload
+    expect(admin.destroy).to be(false)
+    expect(status.reload.use_flg).to be(true)
+  end
+end
