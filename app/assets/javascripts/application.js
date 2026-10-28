@@ -97,3 +97,24 @@ document.addEventListener('submit', async (event) => {
     deadlineSubmissions.delete(form);
   }
 });
+
+// Keep navigation available without JavaScript; collapse only after initialization.
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.querySelector('[data-navigation-toggle]');
+  if (!toggle) return;
+  const navigation = toggle.closest('nav');
+  const menu = document.getElementById(toggle.getAttribute('aria-controls'));
+  toggle.hidden = false;
+  navigation.classList.add('navigation-ready');
+  toggle.addEventListener('click', () => {
+    const open = menu.classList.toggle('is-open');
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+  navigation.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && menu.classList.contains('is-open')) {
+      menu.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.focus();
+    }
+  });
+});

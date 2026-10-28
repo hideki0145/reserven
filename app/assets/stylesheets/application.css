@@ -47,3 +47,20 @@
 #deadline-confirmation::backdrop {
   background: rgb(0 0 0 / 45%);
 }
+
+@media (max-width: 767.98px) {
+  .app-navigation {
+    width: 100%;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .navigation-ready .app-navigation:not(.is-open) {
+    display: none;
+  }
+
+  .app-navigation .nav-link {
+    width: 100%;
+    text-align: left;
+  }
+}

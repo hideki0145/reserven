@@ -6,6 +6,8 @@ RSpec.describe 'Browser usage', type: :system do
     user = create_user
     Item.create!(name: '会議室')
     login(user)
+    expect(page).not_to have_css('[data-navigation-toggle]')
+    expect(page).to have_link('利用状況')
     expect(page).to have_css('.badge', text: '✅ 利用可能')
     expect(page.evaluate_script("getComputedStyle(document.querySelector('.btn-primary')).backgroundColor")).to eq('rgb(0, 123, 255)')
     click_button '利用する'
@@ -67,12 +69,20 @@ RSpec.describe 'Browser usage', type: :system do
   it 'keeps navigation and wide tables usable on a narrow screen' do
     page.current_window.resize_to(390, 844)
     login(create_user(admin: true))
+    expect(page).not_to have_link('ユーザ一覧')
+    find('[data-navigation-toggle]').click
+    expect(find('[data-navigation-toggle]')['aria-expanded']).to eq('true')
+    find('[data-navigation-toggle]').send_keys(:escape)
+    expect(page).not_to have_link('ユーザ一覧')
+    find('[data-navigation-toggle]').click
     click_link 'ユーザ一覧'
     expect(page).to have_content('ユーザ一覧')
     expect(page).to have_css('.table-responsive table')
     expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
+    find('[data-navigation-toggle]').click
     click_link 'アイテム一覧'
     expect(page).to have_content('アイテム一覧')
+    find('[data-navigation-toggle]').click
     click_button 'ログアウト'
     expect(page).to have_current_path(login_path)
   end
