@@ -7,14 +7,14 @@
   <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
 </div>
 <p class="small text-warning mb-3" data-refresh-paused role="status" hidden>入力中のため自動更新を停止しています。</p>
-<p class="small text-body-secondary d-md-none">表は横にスクロールできます。</p>
-<div class="table-responsive position-relative">
-  <table class="table table-hover text-nowrap align-middle" data-auto-refresh>
+<p class="small text-body-secondary d-md-none">利用状況は10分毎に自動更新されます。</p>
+<div class="status-list table-responsive position-relative">
+  <table class="status-table table table-hover text-nowrap align-middle" role="table" aria-label="アイテムの利用状況" data-auto-refresh>
     <thead class="table-light">
       <tr>
-        <th><%= Item.human_attribute_name(:name) %></th>
-        <th><%= "#{Status.model_name.human}(10分毎に自動更新)" %></th>
-        <th></th>
+        <th scope="col"><%= Item.human_attribute_name(:name) %></th>
+        <th scope="col"><%= "#{Status.model_name.human}(10分毎に自動更新)" %></th>
+        <th scope="col"><span class="visually-hidden">操作</span></th>
       </tr>
     </thead>
     <tbody>

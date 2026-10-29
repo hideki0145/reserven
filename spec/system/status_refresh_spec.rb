@@ -26,6 +26,7 @@ RSpec.describe 'Status refresh', type: :system do
   end
 
   it 'preserves changed input across intervals and resumes when all fields are restored' do
+    page.current_window.resize_to(390, 844)
     prepare_page
     Item.create!(name: '2台目')
     visit status_path

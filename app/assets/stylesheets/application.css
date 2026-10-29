@@ -49,6 +49,53 @@
 }
 
 @media (max-width: 767.98px) {
+  .status-list {
+    overflow-x: visible;
+  }
+
+  .status-table,
+  .status-table > tbody {
+    display: block;
+  }
+
+  /* Keep column headings available to assistive technology in the card layout. */
+  .status-table > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .status-table > tbody > tr {
+    display: block;
+    margin-bottom: 1rem;
+    padding: .75rem 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background-color: var(--bs-body-bg);
+  }
+
+  .status-table > tbody > tr > td {
+    display: block;
+    padding: .5rem 0;
+    border: 0;
+    background-color: transparent;
+    box-shadow: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .status-table > tbody > tr > td:empty {
+    display: none;
+  }
+
+  .status-table .btn,
+  .status-table input[type="time"] {
+    min-height: 44px;
+  }
+
   .app-navigation {
     width: 100%;
     flex-direction: column !important;

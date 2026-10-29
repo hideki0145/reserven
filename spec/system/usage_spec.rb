@@ -6,6 +6,7 @@ RSpec.describe 'Browser usage', type: :system do
     user = create_user
     Item.create!(name: '会議室')
     login(user)
+    expect(page).to have_css('.status-table', style: { 'display' => 'table' })
     expect(page).not_to have_css('[data-navigation-toggle]')
     expect(page).to have_link('利用状況')
     expect(page).to have_css('.badge', text: '✅ 利用可能')
@@ -22,21 +23,25 @@ RSpec.describe 'Browser usage', type: :system do
     travel_back
   end
 
-  it 'shows usage states and weekday deadlines on a narrow screen' do
+  it 'shows cards without horizontal scrolling and supports usage on a narrow screen' do
     travel_to(Time.zone.local(2026, 10, 28, 19, 30)) do
       user = create_user
-      other_user = create_user
-      available = Item.create!(name: '利用可能なPC')
+      other_user = create_user(name: 'LongUserName' * 12)
+      available = Item.create!(name: '持ち出し用ノートPC-' * 12)
       active = Item.create!(name: '利用中のPC')
       grace = Item.create!(name: '猶予期間中のPC')
+      disabled = Item.create!(name: '利用中に無効化したPC', disabled: true)
+      hidden = Item.create!(name: '無効で未利用のPC', disabled: true)
       Status.create!(item: active, user: other_user, expires_at: 30.minutes.from_now, use_flg: true)
       Status.create!(item: grace, user: other_user, expires_at: 5.minutes.ago, use_flg: true)
+      Status.create!(item: disabled, user: user, expires_at: 30.minutes.from_now, use_flg: true)
       page.current_window.resize_to(390, 844)
       login(user)
 
       within('tr', text: available.name) do
         expect(page).to have_css('.badge', text: '✅ 利用可能')
         expect(page).to have_button('利用する')
+        fill_in '利用期限', with: '19:50'
       end
       within('tr', text: active.name) do
         expect(page).to have_css('.badge.bg-primary-subtle.text-primary-emphasis', text: '🔵 利用中')
@@ -48,8 +53,38 @@ RSpec.describe 'Browser usage', type: :system do
         expect(page).to have_content('期限後15分の猶予期間中です。')
         expect(page).not_to have_button('利用する')
       end
-      expect(page).to have_css('.table-responsive', style: { 'overflow-x' => 'auto' })
-      expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
+      within('tr', text: disabled.name) do
+        expect(page).to have_content('利用停止中')
+        expect(page).to have_button('利用終了')
+        expect(page).not_to have_button('延長する')
+      end
+      expect(page).not_to have_content(hidden.name)
+      [320, 390, 767].each do |width|
+        page.current_window.resize_to(width, 844)
+        expect(page).to have_css('.status-table tbody tr', style: { 'display' => 'block' }, count: 4)
+        expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
+        expect(page.evaluate_script("document.querySelector('.status-list').scrollWidth <= document.querySelector('.status-list').clientWidth")).to be(true)
+      end
+      page.current_window.resize_to(390, 844)
+      within('tr', text: available.name) do
+        expect(find('input[type="time"]').value).to eq('19:50')
+        click_button '利用する'
+      end
+      within('tr', text: available.name) do
+        expect(page).to have_content('利用期限: 10/28(水) 19:50')
+        fill_in '延長後の利用期限', with: '20:00'
+        click_button '延長する'
+      end
+      within('tr', text: available.name) do
+        expect(page).to have_content('利用期限: 10/28(水) 20:00')
+        click_button '利用終了'
+      end
+      within('tr', text: available.name) do
+        expect(page).to have_content('✅ 利用可能')
+      end
+      page.current_window.resize_to(768, 900)
+      expect(page).to have_css('.status-table', style: { 'display' => 'table' })
+      expect(page).to have_css('.status-table tbody tr', style: { 'display' => 'table-row' }, count: 4)
     end
   end
 
@@ -109,6 +144,7 @@ RSpec.describe 'Deadline entry', type: :system do
   it 'starts and extends across midnight only after confirmation, and supports returning' do
     travel_to(Time.zone.local(2026, 10, 28, 23, 55))
     item = Item.create!(name: '日付またぎのPC')
+    page.current_window.resize_to(390, 844)
     login(create_user)
     expect(find('input[name="expires_at"]').value).to eq('00:10')
     expect(page).to have_css('[data-deadline-day]', exact_text: '翌日')
@@ -118,7 +154,6 @@ RSpec.describe 'Deadline entry', type: :system do
     expect(page).to have_css('dialog[open]')
     expect(page).to have_current_path(root_path)
     expect(find('dialog[open]')).not_to have_content('日本時間')
-    page.current_window.resize_to(390, 844)
     expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
     find('dialog[open]').send_keys(:escape)
     expect(page).not_to have_css('dialog[open]')
