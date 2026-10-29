@@ -12,6 +12,7 @@ class User < ApplicationRecord
 
   scope :active_admins, -> { where(admin: true, disabled: false) }
 
+  before_destroy :reject_deletion_with_outstanding_usage, prepend: true
   before_update :protect_last_active_admin, if: -> {
     admin_in_database && !disabled_in_database && (!admin? || disabled?)
   }
@@ -45,6 +46,13 @@ class User < ApplicationRecord
   end
 
   private
+
+  def reject_deletion_with_outstanding_usage
+    return unless statuses.where(use_flg: true).exists?
+
+    errors.add(:base, '利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
+    throw :abort
+  end
 
   def protect_last_active_admin
     return if User.active_admins.where.not(id: id).exists?

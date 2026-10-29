@@ -68,6 +68,39 @@ RSpec.describe 'User account management', type: :request do
     expect(other.reload).not_to be_disabled
   end
 
+  [false, true].each do |disabled|
+    it "rejects deletion of an account with overdue usage even when disabled is #{disabled}" do
+      other = create_user(disabled: disabled)
+      item = Item.create!(name: '利用中の停止PC', disabled: true)
+      status = Status.create!(item: item, user: other, use_flg: true, expires_at: 1.hour.ago)
+
+      expect { delete admin_user_path(other) }.not_to change(User, :count)
+      expect(response).to redirect_to(admin_user_path(other))
+      follow_redirect!
+      expect(response.body).to include('利用終了していないアイテムがあるため削除できません。')
+      expect(status.reload.use_flg).to be(true)
+      expect(status.user_id).to eq(other.id)
+      get status_path
+      expect(response.body).to include(item.name, other.name, '利用停止中')
+    end
+  end
+
+  it 'allows deletion after the owner ends all outstanding usage' do
+    other = create_user
+    item = Item.create!(name: '返却対象PC')
+    status = Status.create!(item: item, user: other, use_flg: true, expires_at: 1.hour.ago)
+    client = ActionDispatch::Integration::Session.new(Rails.application)
+    client.post login_path, params: { session: { email: other.email, password: 'test-password' } }
+    client.post end_use_status_path(item)
+    expect(client.response.location).to eq("http://www.example.com#{status_path}")
+    expect(status.reload.use_flg).to be(false)
+
+    expect { delete admin_user_path(other) }.to change(User, :count).by(-1)
+    expect(response).to redirect_to(admin_users_path)
+    expect(Status.exists?(status.id)).to be(false)
+    expect(Item.exists?(item.id)).to be(true)
+  end
+
   it 'blocks an already logged-in account on its next request while disabled' do
     other = create_user
     client = ActionDispatch::Integration::Session.new(Rails.application)

@@ -56,6 +56,25 @@ RSpec.describe User, type: :model do
     Status.create!(user: user, item: item, expires_at: 1.hour.from_now)
     expect { user.destroy! }.to change(Status, :count).by(-1)
   end
+
+  [30, -5, -30].each do |minutes|
+    it "preserves the user and all statuses when outstanding usage expires #{minutes} minutes from now" do
+      user = create_user
+      # A previously loaded association must not hide usage created afterwards.
+      user.statuses.load
+      ended = Status.create!(user: user, item: Item.create!(name: '返却済PC'),
+                             use_flg: false, expires_at: 1.hour.ago)
+      outstanding = Status.create!(user: user, item: Item.create!(name: '貸出PC'),
+                                   use_flg: true, expires_at: minutes.minutes.from_now)
+
+      expect(user.destroy).to be(false)
+      expect(user.errors[:base]).to include('利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
+      expect(User.exists?(user.id)).to be(true)
+      expect(ended.reload.use_flg).to be(false)
+      expect(outstanding.reload.use_flg).to be(true)
+      expect(outstanding.user_id).to eq(user.id)
+    end
+  end
 end
 
 RSpec.describe 'Last active administrator protection', type: :model do
