@@ -225,12 +225,49 @@ Slackのデスクトップ通知はBlock Kit内の文字を優先して抽出す
 Webhook未設定時は、その要約とスキップ理由を`debug`ログへ記録します。
 送信成功時の追加ログはなく、失敗時はHTTPステータスまたは例外クラスを`warn`ログへ記録します。
 
+### SQLiteのバックアップ
+
 SQLiteはサーバのローカルディスクに配置し、
 リリース更新時にDBファイルを置き換えないようにしてください。
-バックアップにはSQLiteのオンラインバックアップ機能、
-または`sqlite3 <DBパス> '.backup <バックアップ先>'`を使い、
+バックアップはSQLite CLIの`.backup`で取得します。稼働中でも取得できます。
 稼働中のDBファイルだけを単純コピーしないでください。
+
+アプリのディレクトリで、配置ユーザとして実行します。`sqlite3`コマンドが必要です。
+既定の`storage/production.sqlite3`を使用している場合：
+
+```sh
+backup_file="storage/production-$(date +%Y%m%d-%H%M%S).sqlite3"
+test -f "storage/production.sqlite3" && \
+  sqlite3 "storage/production.sqlite3" ".backup '$backup_file'"
+```
+
+`production-20261029-090000.sqlite3`のように、取得日時を付けて同じディレクトリへ保存します。
+`test -f`で元のDBが存在する場合だけ実行し、パス間違いによる空のDB作成を防ぎます。
+
+本番の環境変数で`SQLITE_DATABASE_PATH`を指定している場合は、実際の保存先を使います。
+systemdの配置例では、シェルにも`/etc/reserven.env`を読み込んでから実行してください。
+
+```sh
+set -a
+. /etc/reserven.env
+set +a
+
+database_path="${SQLITE_DATABASE_PATH:?本番DBのパスを設定してください}"
+backup_file="${database_path%.sqlite3}-$(date +%Y%m%d-%H%M%S).sqlite3"
+test -f "$database_path" && sqlite3 "$database_path" ".backup '$backup_file'"
+```
+
+コマンドが正常終了したことを確認してください。バックアップの整合性は、保存したファイルを指定して確認できます。
+
+```sh
+sqlite3 -readonly "$backup_file" 'PRAGMA quick_check;'
+```
+
+`ok`が返れば簡易的な整合性チェックは成功です。
+DB移行時はアプリ停止後にバックアップを取得し、更新後の動作確認が済むまで保管してください。
 同時書き込みは直列化されるため、大量の更新や複数サーバへの拡張時は構成を見直します。
+
+### アセットの配信
 
 Bootstrap 5.3.8のCSSはjsDelivr CDNから読み込みます。
 バージョン固定のURLとSRIハッシュをレイアウトに指定し、CSS本体はGit管理に含めません。
