@@ -2,7 +2,7 @@ class Admin::ItemsController < ApplicationController
   before_action :require_admin
 
   def index
-    @items = Item.all
+    @items = Item.order(:id)
   end
 
   def show

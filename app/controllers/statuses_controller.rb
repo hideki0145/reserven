@@ -2,7 +2,7 @@ require 'net/https'
 
 class StatusesController < ApplicationController
   def home
-    @items = Item.visible_on_status.includes(status: :user)
+    @items = Item.visible_on_status.order(:id).includes(status: :user)
   end
 
   def deadline_preview
