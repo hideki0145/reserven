@@ -48,6 +48,11 @@
   background: rgb(0 0 0 / 45%);
 }
 
+.status-greeting {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 767.98px) {
   .status-list {
     overflow-x: visible;

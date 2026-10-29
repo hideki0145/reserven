@@ -1,13 +1,12 @@
-<hr>
-<h3>こんにちは、 <%= "#{current_user.name}" %> さん</h3>
-<hr>
-
-<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-  <span class="small text-body-secondary">最終更新: <%= time_tag Time.current, format: :timestamp %></span>
-  <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
+<div class="status-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pb-3 border-bottom">
+  <p class="status-greeting mb-0">こんにちは、 <strong><%= current_user.name %></strong> さん</p>
+  <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
+    <span class="small text-body-secondary">最終更新: <%= time_tag Time.current, format: :timestamp %></span>
+    <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
+  </div>
 </div>
 <p class="small text-warning mb-3" data-refresh-paused role="status" hidden>入力中のため自動更新を停止しています。</p>
-<p class="small text-body-secondary d-md-none">利用状況は10分毎に自動更新されます。</p>
+<p class="small text-body-secondary d-md-none mt-2">利用状況は10分毎に自動更新されます。</p>
 <div class="status-list table-responsive position-relative">
   <table class="status-table table table-hover text-nowrap align-middle" role="table" aria-label="アイテムの利用状況" data-auto-refresh>
     <thead class="table-light">
@@ -54,10 +53,10 @@
           <% if item.can_end_usage?(current_user.id) %>
             <td>
               <% if item.can_extend_usage?(current_user.id) %>
-                <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
+                <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-start gap-2 mb-2' do |f| %>
                   <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
                   <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
-                  <span>まで</span>
+                  <span class="pt-2">まで</span>
                   <%= f.submit '延長する', class: 'btn btn-success' %>
                 <% end %>
               <% end %>
@@ -69,10 +68,10 @@
             <td></td>
           <% else %>
             <td>
-              <%= form_with url: update_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
+              <%= form_with url: update_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-start gap-2 mb-2' do |f| %>
                 <%= f.label :expires_at, '利用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
                 <%= render 'deadline_field', f: f, field_id: "update_status_#{item.id}_expires_at", deadline: Time.current + 15.minutes %>
-                <span>まで</span>
+                <span class="pt-2">まで</span>
                 <%= f.submit '利用する', class: 'btn btn-primary' %>
               <% end %>
             </td>
