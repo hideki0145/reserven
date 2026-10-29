@@ -17,7 +17,9 @@ class User < ApplicationRecord
     admin_in_database && !disabled_in_database && (!admin? || disabled?)
   }
   before_destroy :protect_last_active_admin, prepend: true, if: -> { admin_in_database && !disabled_in_database }
-  before_update :revoke_login_on_disable, if: -> { will_save_change_to_disabled? && disabled? }
+  before_update :revoke_remember_login, if: -> {
+    will_save_change_to_password_digest? || (will_save_change_to_disabled? && disabled?)
+  }
 
   def create_remember_digest
     self.remember_token = User.new_token
@@ -61,7 +63,7 @@ class User < ApplicationRecord
     throw :abort
   end
 
-  def revoke_login_on_disable
+  def revoke_remember_login
     self.remember_digest = nil
   end
 end

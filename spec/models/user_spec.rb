@@ -32,6 +32,21 @@ RSpec.describe User, type: :model do
     expect(user.reload.email).to eq('next@example.com')
   end
 
+  it 'revokes remembered login only when a password change succeeds' do
+    user = create_user
+    user.create_remember_digest
+    token = user.remember_token
+    digest = user.remember_digest
+    expect(user.update(password: 'new-password', password_confirmation: 'mismatch')).to be(false)
+    expect(user.reload.remember_digest).to eq(digest)
+    user = User.find(user.id)
+    user.update!(name: '変更した名前', password: '', password_confirmation: '')
+    expect(user.reload.authenticated?(token)).to be(true)
+    user.update!(password: 'new-password', password_confirmation: 'new-password')
+    expect(user.reload.remember_digest).to be_nil
+    expect(user.authenticated?(token)).to be(false)
+  end
+
   it 'rejects duplicate emails after normalization on creation and update' do
     user = create_user(email: 'duplicate@example.com')
     duplicate = User.new(name: '重複', email: ' Duplicate@Example.COM ', password: 'test-password')

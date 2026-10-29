@@ -79,4 +79,22 @@ RSpec.describe 'Sessions', type: :request do
     new_session.get root_path, headers: { 'HTTP_COOKIE' => "user_id=#{cookies['user_id']}" }
     expect(new_session.response.location).to eq('http://www.example.com/login')
   end
+
+  it 'rejects old persistent cookies after an administrator changes the password and issues new ones on login' do
+    login(user, remember: '1')
+    old_cookies = %w[user_id remember_token].map { |key| "#{key}=#{cookies[key]}" }.join('; ')
+    admin_client = ActionDispatch::Integration::Session.new(Rails.application)
+    admin = create_user(admin: true)
+    admin_client.post login_path, params: { session: { email: admin.email, password: 'test-password' } }
+    admin_client.patch admin_user_path(user), params: { user: { password: 'new-password', password_confirmation: 'new-password' } }
+    expect(admin_client.response.status).to eq(302)
+    restored = ActionDispatch::Integration::Session.new(Rails.application)
+    restored.get root_path, headers: { 'HTTP_COOKIE' => old_cookies }
+    expect(restored.response.location).to eq('http://www.example.com/login')
+    restored.post login_path, params: { session: { email: user.email, password: 'test-password' } }
+    expect(restored.response.status).to eq(422)
+    restored.post login_path, params: { session: { email: user.email, password: 'new-password', remember_cookies: '1' } }
+    expect(restored.response.location).to eq('http://www.example.com/')
+    expect(user.reload.authenticated?(restored.cookies['remember_token'])).to be(true)
+  end
 end
