@@ -20,6 +20,13 @@ RSpec.describe Status, type: :model do
     expect(status).not_to be_grace_period
   end
 
+  it 'uses the supplied time for both ends of the grace period' do
+    deadline = status.expires_at
+    expect(status.grace_period?(now: deadline - 0.001)).to be(false)
+    expect(status.grace_period?(now: deadline)).to be(true)
+    expect(status.grace_period?(now: deadline + 15.minutes)).to be(false)
+  end
+
   it 'sets and resets usage' do
     status.reset
     expect(status.reload.use_flg).to be(false)

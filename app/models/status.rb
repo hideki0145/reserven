@@ -2,8 +2,8 @@ class Status < ApplicationRecord
   belongs_to :item
   belongs_to :user
 
-  def grace_period?
-    use_flg && (expires_at <= Time.current && Time.current < expires_at.since(15.minutes))
+  def grace_period?(now: Time.current)
+    use_flg && (expires_at <= now && now < expires_at.since(15.minutes))
   end
 
   def set(user_id, expires_at)

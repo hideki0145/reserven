@@ -17,12 +17,13 @@
         <th scope="col"><span class="visually-hidden">操作</span></th>
       </tr>
     </thead>
+    <% usage_checked_at = Time.current %>
     <tbody>
       <% @items.each do |item| %>
         <tr>
           <td class="fw-semibold"><%= item.name %></td>
           <% status = item.status %>
-          <% state = item.usage_state(current_user.id) %>
+          <% state = item.usage_state(current_user.id, now: usage_checked_at) %>
           <td>
             <% if state != :available %>
               <% if state == :stopped %>
@@ -59,7 +60,7 @@
                 <%= f.submit '利用終了', class: 'btn btn-primary' %>
               <% end %>
             </td>
-          <% elsif !item.can_start_usage?(current_user.id) %>
+          <% elsif !item.can_start_usage?(current_user.id, now: usage_checked_at) %>
             <td></td>
           <% else %>
             <td>

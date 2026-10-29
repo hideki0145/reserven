@@ -35,6 +35,26 @@ RSpec.describe Item, type: :model do
       expect_usage(other, :in_use, start: false, extend: false, finish: false)
     end
 
+    it 'uses one clock reading even when the deadline passes during a state check' do
+      deadline = Time.current
+      viewer_id = other.id
+      item.create_status!(user: owner, use_flg: true, expires_at: deadline)
+      allow(Time).to receive(:current).and_return(deadline - 0.001, deadline + 0.001)
+      expect(item.usage_state(viewer_id)).to eq(:in_use)
+      expect(Time).to have_received(:current).once
+    end
+
+    it 'keeps state and start permission consistent with a shared time at the grace boundary' do
+      deadline = 15.minutes.ago
+      item.create_status!(user: owner, use_flg: true, expires_at: deadline)
+      checked_at = deadline + 15.minutes - 0.001
+      expect(item.usage_state(other.id, now: checked_at)).to eq(:grace_period)
+      expect(item.can_start_usage?(other.id, now: checked_at)).to be(false)
+      checked_at = deadline + 15.minutes
+      expect(item.usage_state(other.id, now: checked_at)).to eq(:available)
+      expect(item.can_start_usage?(other.id, now: checked_at)).to be(true)
+    end
+
     [0, 899, 900, 901].each do |seconds|
       it "handles both viewers #{seconds} seconds after expiry" do
         item.create_status!(user: owner, use_flg: true, expires_at: seconds.seconds.ago)
