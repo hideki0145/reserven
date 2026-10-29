@@ -16,6 +16,11 @@
       </tr>
     </thead>
     <tbody>
+      <% if @items.empty? %>
+        <tr>
+          <td colspan="5" class="text-body-secondary">アイテムが登録されていません。</td>
+        </tr>
+      <% end %>
       <% @items.each do |item| %>
         <tr>
           <td><%= link_to item.name, [:admin, item] %></td>

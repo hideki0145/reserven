@@ -19,6 +19,11 @@
     </thead>
     <% usage_checked_at = Time.current %>
     <tbody>
+      <% if @items.empty? %>
+        <tr>
+          <td colspan="3" class="text-body-secondary">現在、表示できるアイテムはありません。</td>
+        </tr>
+      <% end %>
       <% @items.each do |item| %>
         <tr>
           <td class="fw-semibold"><%= item.name %></td>

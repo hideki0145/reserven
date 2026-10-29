@@ -12,11 +12,13 @@ RSpec.describe 'Item availability management', type: :request do
   it 'hides unused disabled items but keeps them in the admin listing' do
     get status_path
     expect(response.body).not_to include(item.name)
+    expect(response.body).to include('現在、表示できるアイテムはありません。')
     get admin_items_path
     expect(response.body).to include(item.name, '無効')
     item.update!(disabled: false)
     get status_path
     expect(response.body).to include(item.name, '利用する')
+    expect(response.body).not_to include('現在、表示できるアイテムはありません。')
   end
 
   it 'preserves outstanding usage even after expiry, for both owner and other users' do
