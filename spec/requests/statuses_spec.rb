@@ -212,6 +212,61 @@ RSpec.describe 'Item usage', type: :request do
     expect(response.body).not_to include('猶予期間中', '利用期限:')
   end
 
+  [899, 900, 901].each do |seconds|
+    [true, false].each do |own_usage|
+      it "shows the grace boundary correctly #{seconds} seconds after expiry for own_usage=#{own_usage}" do
+        reserve(owner: own_usage ? user : other_user, expires_at: seconds.seconds.ago)
+        get status_path
+        html = Nokogiri::HTML(response.body)
+        if seconds < 900
+          expect(html.at_css('.badge').text).to include('猶予期間中')
+          expect(html.text).not_to include('期限切れ', '他の利用者は利用を開始できます。')
+        elsif own_usage
+          expect(html.at_css('.badge.text-bg-danger').text).to include('期限切れ')
+          expect(html.text).to include('他の利用者は利用を開始できます。', user.name, '利用期限:')
+        else
+          expect(html.at_css('.badge').text).to include('利用可能')
+          expect(html.text).not_to include('期限切れ', '他の利用者は利用を開始できます。', '利用期限:')
+        end
+        if own_usage
+          expect(html.at_css('input[value="延長する"]')).to be_present
+          expect(html.at_css('input[value="利用終了"]')).to be_present
+          expect(html.at_css('input[value="利用する"]')).to be_nil
+        else
+          expect(html.at_css('input[value="利用する"]').present?).to eq(seconds >= 900)
+          expect(html.at_css('input[value="延長する"]')).to be_nil
+          expect(html.at_css('input[value="利用終了"]')).to be_nil
+        end
+      end
+    end
+  end
+
+  it 'allows the owner to extend overdue usage and end it after extension' do
+    status = reserve(expires_at: 30.minutes.ago)
+    post extend_status_path(item), params: { expires_at: '12:30' }
+    expect(response).to redirect_to(status_path)
+    expect(status.reload.expires_at).to eq(30.minutes.from_now)
+    get status_path
+    expect(response.body).to include('🔵 利用中')
+    expect(response.body).not_to include('期限切れ', '他の利用者は利用を開始できます。')
+    post end_use_status_path(item)
+    expect(status.reload.use_flg).to be(false)
+  end
+
+  it 'rejects the previous owner’s operations once another user takes overdue usage' do
+    status = reserve(owner: other_user, expires_at: 30.minutes.ago)
+    post update_status_path(item), params: { expires_at: '13:00' }
+    expect(status.reload.user).to eq(user)
+    login(other_user)
+    post extend_status_path(item), params: { expires_at: '14:00' }
+    expect(status.reload.expires_at).to eq(1.hour.from_now)
+    post end_use_status_path(item)
+    expect(status.reload.use_flg).to be(true)
+    expect(status.user).to eq(user)
+    get status_path
+    expect(response.body).not_to include('期限切れ', '他の利用者は利用を開始できます。', '延長する', '利用終了')
+  end
+
   [nil, '', ' '].each do |webhook_url|
     it "skips Slack notifications when the webhook URL is #{webhook_url.inspect}" do
       allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)

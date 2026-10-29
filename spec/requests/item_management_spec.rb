@@ -24,6 +24,7 @@ RSpec.describe 'Item availability management', type: :request do
     get status_path
     expect(response.body).to include(item.name, '利用停止中', '利用終了')
     expect(response.body).not_to include('延長する', 'value="利用する"')
+    expect(response.body).not_to include('期限切れ', '他の利用者は利用を開始できます。')
     login(create_user)
     get status_path
     expect(response.body).to include(item.name, '利用停止中', user.name)

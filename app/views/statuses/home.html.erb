@@ -24,12 +24,15 @@
           <% status = item.status %>
           <% in_use = (item.disabled? ? status&.use_flg? : status&.use?(current_user.id)) %>
           <% grace_period = status&.grace_period? %>
+          <% expired = in_use && !grace_period && status.expires_at <= Time.current %>
           <td>
             <% if in_use || grace_period %>
               <% if item.disabled? %>
                 <span class="badge rounded-pill text-bg-secondary fs-6 mb-2">利用停止中</span>
               <% elsif grace_period %>
                 <span class="badge rounded-pill text-bg-warning fs-6 mb-2">🟠 猶予期間中</span>
+              <% elsif expired %>
+                <span class="badge rounded-pill text-bg-danger fs-6 mb-2">⏰ 期限切れ</span>
               <% else %>
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
               <% end %>
@@ -37,6 +40,8 @@
               <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
               <% if grace_period && !item.disabled? %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
+              <% elsif expired && !item.disabled? %>
+                <div class="small text-body-secondary mt-1">他の利用者は利用を開始できます。</div>
               <% end %>
             <% else %>
               <span class="badge rounded-pill text-bg-light border fs-6">✅ 利用可能</span>
