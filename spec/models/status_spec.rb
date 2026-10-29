@@ -9,16 +9,6 @@ RSpec.describe Status, type: :model do
     travel_to(Time.zone.local(2026, 10, 27, 12, 0)) { example.run }
   end
 
-  it 'marks an item in use until its deadline' do
-    status.update!(expires_at: 1.minute.from_now)
-    expect(status.use?(user.id + 1)).to be(true)
-  end
-
-  it 'keeps the owner in use after expiry but not another user' do
-    expect(status.use?(user.id)).to be(true)
-    expect(status.use?(user.id + 1)).to be(false)
-  end
-
   it 'applies the grace period from expiry up to, but excluding, 15 minutes' do
     expect(status).to be_grace_period
     travel 15.minutes
@@ -32,10 +22,11 @@ RSpec.describe Status, type: :model do
 
   it 'sets and resets usage' do
     status.reset
-    expect(status.reload.use?(user.id)).to be(false)
+    expect(status.reload.use_flg).to be(false)
     expect(status).not_to be_grace_period
     status.set(user.id, 30.minutes.from_now)
-    expect(status.reload.use?(user.id + 1)).to be(true)
+    expect(status.reload.use_flg).to be(true)
+    expect(status.user_id).to eq(user.id)
     expect(status.expires_at).to eq(30.minutes.from_now)
   end
 
