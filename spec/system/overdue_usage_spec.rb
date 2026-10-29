@@ -9,7 +9,7 @@ RSpec.describe 'Overdue usage display', type: :system do
         other_item = Item.create!(name: '他の人の期限切れPC')
         stopped_item = Item.create!(name: '利用停止中のPC', disabled: true)
         [[own_item, owner], [other_item, create_user], [stopped_item, owner]].each do |item, user|
-          Status.create!(item: item, user: user, use_flg: true, expires_at: 30.minutes.ago)
+          create_usage(item: item, user: user, active: true, expires_at: 30.minutes.ago)
         end
         page.current_window.resize_to(width, 900)
         login(owner)

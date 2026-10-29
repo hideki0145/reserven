@@ -4,7 +4,7 @@ RSpec.describe 'Item management screen', type: :system do
   it 'stops an occupied item, allows ending it and reactivates it' do
     user = create_user(admin: true)
     item = Item.create!(name: '貸出中PC', created_at: Time.zone.local(2026, 10, 28, 19, 30, 15))
-    Status.create!(item: item, user: user, use_flg: true, expires_at: 30.minutes.from_now)
+    create_usage(item: item, user: user, active: true, expires_at: 30.minutes.from_now)
     login(user)
     click_link 'アイテム一覧'
     expect(page).to have_content('2026/10/28 19:30:15')

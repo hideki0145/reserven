@@ -5,7 +5,8 @@ class User < ApplicationRecord
 
   normalizes :email, with: ->(email) { email.strip.downcase }
 
-  has_many :statuses, dependent: :destroy
+  has_many :usages, dependent: :nullify
+  has_many :finished_usages, class_name: 'Usage', foreign_key: :finished_by_id, dependent: :nullify
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true
@@ -50,7 +51,7 @@ class User < ApplicationRecord
   private
 
   def reject_deletion_with_outstanding_usage
-    return unless statuses.where(use_flg: true).exists?
+    return unless usages.unfinished.exists?
 
     errors.add(:base, '利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
     throw :abort

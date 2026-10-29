@@ -52,8 +52,8 @@ RSpec.describe 'List ordering', type: :request do
     active = Item.create!(name: '利用中の無効PC', disabled: true)
     last = Item.create!(name: 'AのPC')
     owner = create_user
-    Status.create!(item: last, user: owner, use_flg: true, expires_at: 1.hour.from_now)
-    Status.create!(item: active, user: owner, use_flg: true, expires_at: 1.hour.from_now)
+    create_usage(item: last, user: owner, active: true, expires_at: 1.hour.from_now)
+    create_usage(item: active, user: owner, active: true, expires_at: 1.hour.from_now)
 
     get status_path
     expect(response).to have_http_status(:ok)

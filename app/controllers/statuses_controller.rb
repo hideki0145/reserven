@@ -1,6 +1,6 @@
 class StatusesController < ApplicationController
   def home
-    @items = Item.visible_on_status.order(:id).includes(status: :user)
+    @items = Item.visible_on_status.order(:id).includes(current_usage: :user)
   end
 
   def deadline_preview
@@ -16,12 +16,11 @@ class StatusesController < ApplicationController
 
   def update_status
     item = Item.find(params[:id])
+    usage = nil
     item.with_lock do
       return if reject_disabled_item(item)
 
-      if item.status.blank?
-        item.build_status
-      elsif !item.can_start_usage?(current_user.id)
+      unless item.can_start_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は既に利用中です。"
         return
       end
@@ -29,10 +28,10 @@ class StatusesController < ApplicationController
       expires_at = UsageDeadline.parse(params[:expires_at])
       return if confirm_overnight_usage(item, expires_at, :start)
 
-      item.status.set(current_user.id, expires_at)
+      usage = item.start_usage!(current_user, expires_at)
     end
-    SlackNotifier.deliver(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: item.status.expires_at))
-    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用します。"
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: usage.ends_at))
+    redirect_to status_path, notice: "#{item.name}を[#{I18n.l usage.ends_at, format: :short}]迄 利用します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
   end
@@ -40,10 +39,11 @@ class StatusesController < ApplicationController
   def extend_status
     item = Item.find(params[:id])
     previous_expires_at = nil
+    usage = nil
     item.with_lock do
       return if reject_disabled_item(item)
 
-      if item.status.blank? || !item.status.use_flg?
+      if item.current_usage.nil?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
       elsif !item.can_extend_usage?(current_user.id)
@@ -52,19 +52,20 @@ class StatusesController < ApplicationController
       end
 
       expires_at = UsageDeadline.parse(params[:expires_at])
-      if expires_at <= item.status.expires_at
+      if expires_at <= item.current_usage.ends_at
         redirect_to status_path, alert: '利用期限以前の時刻は指定できません。'
         return
       end
 
       return if confirm_overnight_usage(item, expires_at, :extend)
 
-      previous_expires_at = item.status.expires_at
-      item.status.set(current_user.id, expires_at)
+      previous_expires_at = item.current_usage.ends_at
+      usage = item.current_usage
+      usage.update!(ends_at: expires_at)
     end
     SlackNotifier.deliver(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
-                                                     expires_at: item.status.expires_at, previous_expires_at: previous_expires_at))
-    redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用延長します。"
+                                                     expires_at: usage.ends_at, previous_expires_at: previous_expires_at))
+    redirect_to status_path, notice: "#{item.name}を[#{I18n.l usage.ends_at, format: :short}]迄 利用延長します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
   end
@@ -72,15 +73,15 @@ class StatusesController < ApplicationController
   def end_use_status
     item = Item.find(params[:id])
     item.with_lock do
-      status = item.status
-      if status.nil? || !status.use_flg?
+      usage = item.current_usage
+      if usage.nil?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
       elsif !item.can_end_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end
-      status.reset
+      usage.finish!(current_user)
     end
     SlackNotifier.deliver(SlackUsageNotification.build(event: :end, item: item, user: current_user))
     redirect_to status_path, notice: "#{item.name}を利用終了しました。"

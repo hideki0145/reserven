@@ -65,28 +65,29 @@ RSpec.describe User, type: :model do
     end
   end
 
-  it 'removes dependent statuses when a user is deleted' do
+  it 'preserves finished usage when a user is deleted' do
     user = create_user
     item = Item.create!(name: '会議室')
-    Status.create!(user: user, item: item, expires_at: 1.hour.from_now)
-    expect { user.destroy! }.to change(Status, :count).by(-1)
+    usage = create_usage(user: user, item: item, expires_at: 1.hour.from_now, active: false)
+    expect { user.destroy! }.not_to change(Usage, :count)
+    expect(usage.reload.user_id).to be_nil
   end
 
   [30, -5, -30].each do |minutes|
-    it "preserves the user and all statuses when outstanding usage expires #{minutes} minutes from now" do
+    it "preserves the user and all usage records when outstanding usage expires #{minutes} minutes from now" do
       user = create_user
       # A previously loaded association must not hide usage created afterwards.
-      user.statuses.load
-      ended = Status.create!(user: user, item: Item.create!(name: '返却済PC'),
-                             use_flg: false, expires_at: 1.hour.ago)
-      outstanding = Status.create!(user: user, item: Item.create!(name: '貸出PC'),
-                                   use_flg: true, expires_at: minutes.minutes.from_now)
+      user.usages.load
+      ended = create_usage(user: user, item: Item.create!(name: '返却済PC'),
+                           active: false, expires_at: 1.hour.ago)
+      outstanding = create_usage(user: user, item: Item.create!(name: '貸出PC'),
+                                 active: true, expires_at: minutes.minutes.from_now)
 
       expect(user.destroy).to be(false)
       expect(user.errors[:base]).to include('利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
       expect(User.exists?(user.id)).to be(true)
-      expect(ended.reload.use_flg).to be(false)
-      expect(outstanding.reload.use_flg).to be(true)
+      expect(ended.reload.unfinished?).to be(false)
+      expect(outstanding.reload.unfinished?).to be(true)
       expect(outstanding.user_id).to eq(user.id)
     end
   end
@@ -96,12 +97,12 @@ RSpec.describe 'Last active administrator protection', type: :model do
   it 'rejects direct model changes and keeps dependent usage intact on rejected deletion' do
     admin = create_user(admin: true)
     item = Item.create!(name: 'PC')
-    status = Status.create!(item: item, user: admin, use_flg: true, expires_at: 1.hour.from_now)
+    status = create_usage(item: item, user: admin, active: true, expires_at: 1.hour.from_now)
     expect(admin.update(admin: false)).to be(false)
     admin.reload
     expect(admin.update(disabled: true)).to be(false)
     admin.reload
     expect(admin.destroy).to be(false)
-    expect(status.reload.use_flg).to be(true)
+    expect(status.reload.unfinished?).to be(true)
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_000001) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
@@ -18,15 +18,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_000000) do
     t.boolean "disabled", default: false, null: false
   end
 
-  create_table "statuses", force: :cascade do |t|
-    t.bigint "item_id", null: false
-    t.bigint "user_id", null: false
-    t.boolean "use_flg", default: false, null: false
-    t.datetime "expires_at", null: false
+  create_table "usages", force: :cascade do |t|
+    t.integer "item_id"
+    t.integer "user_id"
+    t.string "item_name_snapshot", null: false
+    t.string "user_name_snapshot", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "ends_at", null: false
+    t.datetime "finished_at"
+    t.string "finish_reason"
+    t.integer "finished_by_id"
+    t.string "finished_by_name_snapshot"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["item_id"], name: "index_statuses_on_item_id", unique: true
-    t.index ["user_id"], name: "index_statuses_on_user_id"
+    t.index ["finished_by_id"], name: "index_usages_on_finished_by_id"
+    t.index ["item_id", "finished_at"], name: "index_usages_on_item_id_and_finished_at"
+    t.index ["item_id"], name: "index_usages_on_item_id"
+    t.index ["user_id"], name: "index_usages_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -41,6 +49,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_000000) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
-  add_foreign_key "statuses", "items"
-  add_foreign_key "statuses", "users"
+  add_foreign_key "usages", "items"
+  add_foreign_key "usages", "users"
+  add_foreign_key "usages", "users", column: "finished_by_id"
 end

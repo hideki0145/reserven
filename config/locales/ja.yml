@@ -6,7 +6,7 @@ ja:
     models:
       user: ユーザ
       item: アイテム
-      status: ステータス
+      usage: ステータス
     attributes:
       user:
         id: ID
@@ -24,9 +24,9 @@ ja:
         name: 名前
         created_at: 登録日時
         updated_at: 更新日時
-      status:
+      usage:
         id: ID
-        use_flg: 利用中
-        expires_at: 利用期限
+        starts_at: 開始日時
+        ends_at: 利用期限
         created_at: 登録日時
         updated_at: 更新日時

@@ -15,25 +15,25 @@ RSpec.describe 'Item usage', type: :request do
     login(user)
   end
 
-  def reserve(owner: user, expires_at: 30.minutes.from_now, use_flg: true)
-    Status.create!(item: item, user: owner, expires_at: expires_at, use_flg: use_flg)
+  def reserve(owner: user, expires_at: 30.minutes.from_now, active: true)
+    create_usage(item: item, user: owner, expires_at: expires_at, active: active)
   end
 
   it 'starts, extends and ends usage' do
-    expect { post update_status_path(item), params: { expires_at: '12:30' } }.to change(Status, :count).by(1)
+    expect { post update_status_path(item), params: { expires_at: '12:30' } }.to change(Usage, :count).by(1)
     expect(response).to redirect_to(status_path)
-    expect(item.reload.status.user).to eq(user)
-    expect(item.status.expires_at).to eq(Time.zone.local(2026, 10, 27, 12, 30))
+    expect(item.reload.current_usage.user).to eq(user)
+    expect(item.current_usage.ends_at).to eq(Time.zone.local(2026, 10, 27, 12, 30))
     post extend_status_path(item), params: { expires_at: '13:00' }
-    expect(item.status.reload.expires_at).to eq(Time.zone.local(2026, 10, 27, 13))
+    expect(item.current_usage.reload.ends_at).to eq(Time.zone.local(2026, 10, 27, 13))
     post end_use_status_path(item)
-    expect(item.status.reload.use_flg).to be(false)
+    expect(item.usages.order(:id).last.unfinished?).to be(false)
   end
 
   it 'previews an overnight deadline without writing or sending notifications' do
     expect do
       post deadline_preview_path, params: { expires_at: '00:10' }
-    end.not_to change(Status, :count)
+    end.not_to change(Usage, :count)
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to include('confirmation_required' => true, 'label' => '翌日 10/28(水) 00:10')
     post deadline_preview_path, params: { expires_at: 'invalid' }
@@ -42,7 +42,7 @@ RSpec.describe 'Item usage', type: :request do
   end
 
   it 'rejects an empty deadline' do
-    expect { post update_status_path(item), params: { expires_at: '' } }.not_to change(Status, :count)
+    expect { post update_status_path(item), params: { expires_at: '' } }.not_to change(Usage, :count)
     expect(flash[:alert]).to eq('期限を指定してください。')
   end
 
@@ -53,13 +53,13 @@ RSpec.describe 'Item usage', type: :request do
     allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(webhook_url)
     notification = stub_request(:post, webhook_url).to_return(status: 200, body: 'ok')
 
-    expect { post update_status_path(item), params: { expires_at: '00:10' } }.not_to change(Status, :count)
+    expect { post update_status_path(item), params: { expires_at: '00:10' } }.not_to change(Usage, :count)
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('日付をまたぐ利用の確認', '翌日 10/28(水) 00:10')
     expect(notification).not_to have_been_requested
 
     post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: deadline.iso8601 }
-    expect(item.reload.status.expires_at).to eq(deadline)
+    expect(item.reload.current_usage.ends_at).to eq(deadline)
     expect(notification).to have_been_requested.once
   end
 
@@ -68,10 +68,10 @@ RSpec.describe 'Item usage', type: :request do
     status = reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 55))
     post extend_status_path(item), params: { expires_at: '00:10' }
     expect(response.body).to include('日付をまたぐ利用の確認')
-    expect(status.reload.expires_at).to eq(Time.zone.local(2026, 10, 27, 23, 55))
+    expect(status.reload.ends_at).to eq(Time.zone.local(2026, 10, 27, 23, 55))
     deadline = Time.zone.local(2026, 10, 28, 0, 10)
     post extend_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: deadline.iso8601 }
-    expect(status.reload.expires_at).to eq(deadline)
+    expect(status.reload.ends_at).to eq(deadline)
   end
 
   it 'rechecks availability after a confirmation page was displayed' do
@@ -90,14 +90,14 @@ RSpec.describe 'Item usage', type: :request do
     travel_to(Time.zone.local(2026, 10, 28, 0, 20))
     expect do
       post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: old_deadline.iso8601 }
-    end.not_to change(Status, :count)
+    end.not_to change(Usage, :count)
     expect(response.body).to include('翌日 10/29(木) 00:10')
   end
 
   it 'rejects malformed and explicit past deadlines without creating usage or notifying Slack' do
     allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return('https://hooks.slack.com/services/TEST/CHANNEL/SECRET')
     ['invalid', '24:00', '12:00', '2026-10-27T11:00', '2026-10-27T12:00'].each do |deadline|
-      expect { post update_status_path(item), params: { expires_at: deadline } }.not_to change(Status, :count)
+      expect { post update_status_path(item), params: { expires_at: deadline } }.not_to change(Usage, :count)
       expect(response).to redirect_to(status_path)
       expect(flash[:alert]).to be_present
     end
@@ -109,7 +109,7 @@ RSpec.describe 'Item usage', type: :request do
     ['invalid', '2026-10-27T11:45', '2026-10-27T12:00'].each do |deadline|
       post extend_status_path(item), params: { expires_at: deadline }
       expect(response).to redirect_to(status_path)
-      expect(status.reload.expires_at).to eq(30.minutes.ago)
+      expect(status.reload.ends_at).to eq(30.minutes.ago)
       expect(flash[:alert]).to be_present
     end
   end
@@ -145,16 +145,16 @@ RSpec.describe 'Item usage', type: :request do
 
   it 'allows taking an item after its grace period' do
     status = reserve(owner: other_user, expires_at: 15.minutes.ago)
-    expect { post update_status_path(item), params: { expires_at: '13:00' } }.not_to change(Status, :count)
-    expect(status.reload.user).to eq(user)
+    expect { post update_status_path(item), params: { expires_at: '13:00' } }.to change(Usage, :count).by(1)
+    expect(item.reload.current_usage.user).to eq(user)
   end
 
   it 'rejects extending or ending another user’s usage' do
     status = reserve(owner: other_user)
     post extend_status_path(item), params: { expires_at: '13:00' }
-    expect(status.reload.expires_at).to eq(30.minutes.from_now)
+    expect(status.reload.ends_at).to eq(30.minutes.from_now)
     post end_use_status_path(item)
-    expect(status.reload.use_flg).to be(true)
+    expect(status.reload.unfinished?).to be(true)
     expect(flash[:notice]).to include('自分が利用中ではありません')
   end
 
@@ -162,7 +162,7 @@ RSpec.describe 'Item usage', type: :request do
     status = reserve
     ['2026-10-27T12:30', '2026-10-27T12:15'].each do |deadline|
       post extend_status_path(item), params: { expires_at: deadline }
-      expect(status.reload.expires_at).to eq(30.minutes.from_now)
+      expect(status.reload.ends_at).to eq(30.minutes.from_now)
       expect(flash[:alert]).to eq('利用期限以前の時刻は指定できません。')
     end
   end
@@ -173,9 +173,9 @@ RSpec.describe 'Item usage', type: :request do
     expect(flash[:notice]).to include('利用中ではありません')
     post extend_status_path(item), params: { expires_at: '13:00' }
     expect(response).to redirect_to(status_path)
-    status = reserve(use_flg: false)
+    status = reserve(active: false)
     post extend_status_path(item), params: { expires_at: '13:00' }
-    expect(status.reload.use_flg).to be(false)
+    expect(status.reload.unfinished?).to be(false)
   end
 
   it 'renders the usage page with the refresh marker' do
@@ -186,7 +186,7 @@ RSpec.describe 'Item usage', type: :request do
   end
 
   it 'shows availability without stale usage details after usage ends' do
-    reserve(use_flg: false)
+    reserve(active: false)
     get status_path
     expect(response.body).to include('✅ 利用可能', '利用する')
     expect(response.body).not_to include('利用期限:', '延長する', '利用終了')
@@ -245,24 +245,24 @@ RSpec.describe 'Item usage', type: :request do
     status = reserve(expires_at: 30.minutes.ago)
     post extend_status_path(item), params: { expires_at: '12:30' }
     expect(response).to redirect_to(status_path)
-    expect(status.reload.expires_at).to eq(30.minutes.from_now)
+    expect(status.reload.ends_at).to eq(30.minutes.from_now)
     get status_path
     expect(response.body).to include('🔵 利用中')
     expect(response.body).not_to include('期限切れ', '他の利用者は利用を開始できます。')
     post end_use_status_path(item)
-    expect(status.reload.use_flg).to be(false)
+    expect(status.reload.unfinished?).to be(false)
   end
 
   it 'rejects the previous owner’s operations once another user takes overdue usage' do
     status = reserve(owner: other_user, expires_at: 30.minutes.ago)
     post update_status_path(item), params: { expires_at: '13:00' }
-    expect(status.reload.user).to eq(user)
+    expect(item.reload.current_usage.user).to eq(user)
     login(other_user)
     post extend_status_path(item), params: { expires_at: '14:00' }
-    expect(status.reload.expires_at).to eq(1.hour.from_now)
+    expect(item.reload.current_usage.ends_at).to eq(1.hour.from_now)
     post end_use_status_path(item)
-    expect(status.reload.use_flg).to be(true)
-    expect(status.user).to eq(user)
+    expect(item.reload.current_usage.unfinished?).to be(true)
+    expect(item.current_usage.user).to eq(user)
     get status_path
     expect(response.body).not_to include('期限切れ', '他の利用者は利用を開始できます。', '延長する', '利用終了')
   end
@@ -276,7 +276,7 @@ RSpec.describe 'Item usage', type: :request do
       end
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(response).to redirect_to(status_path)
-      expect(item.reload.status.use_flg).to be(true)
+      expect(item.reload.current_usage.unfinished?).to be(true)
       expect(debug_messages).to include(
         "Slack通知スキップ(Webhook未設定): #{item.name}を#{user.name}さんが10/27(火) 12:30まで利用します。"
       )
@@ -347,7 +347,7 @@ RSpec.describe 'Item usage', type: :request do
       expect(Rails.logger).to receive(:warn).with('Slack notification failed (Net::OpenTimeout)')
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(response).to redirect_to(status_path)
-      expect(item.reload.status.use_flg).to be(true)
+      expect(item.reload.current_usage.unfinished?).to be(true)
     end
 
     it 'keeps the successful reservation when Slack returns an error' do
@@ -355,7 +355,7 @@ RSpec.describe 'Item usage', type: :request do
       expect(Rails.logger).to receive(:warn).with('Slack notification failed (HTTP 403)')
       post update_status_path(item), params: { expires_at: '12:30' }
       expect(response).to redirect_to(status_path)
-      expect(item.reload.status.use_flg).to be(true)
+      expect(item.reload.current_usage.unfinished?).to be(true)
     end
 
     ['not a URL', 'http://hooks.slack.com/services/TEST/CHANNEL/SECRET', 'https:/missing-host'].each do |invalid_url|
@@ -366,7 +366,7 @@ RSpec.describe 'Item usage', type: :request do
           expect(Rails.logger).to receive(:warn).with(/\ASlack notification failed \((invalid webhook URL|URI::InvalidURIError)\)\z/)
           post update_status_path(item), params: { expires_at: '12:30' }
           expect(response).to redirect_to(status_path)
-          expect(item.reload.status.use_flg).to be(true)
+          expect(item.reload.current_usage.unfinished?).to be(true)
           expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
         end
       end
