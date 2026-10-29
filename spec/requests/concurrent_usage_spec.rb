@@ -19,7 +19,8 @@ RSpec.describe 'Concurrent item usage', type: :request do
         ActiveRecord::Base.connection_pool.with_connection do
           ready << true
           start.pop
-          client.post update_status_path(item), params: { expires_at: 1.hour.from_now.iso8601 }
+          deadline = 1.hour.from_now.iso8601
+          client.post update_status_path(item), params: { expires_at: deadline, confirmed_expires_at: deadline }
           [client.response.status, client.request.flash[:notice]]
         end
       end
@@ -29,11 +30,12 @@ RSpec.describe 'Concurrent item usage', type: :request do
     results = workers.map(&:value)
 
     expect(results.map(&:first)).to eq([302, 302])
-    expect(results.count { |_, notice| notice.include?('既に使用中') }).to eq(1)
+    expect(results.count { |_, notice| notice.include?('既に利用中') }).to eq(1)
     expect(Status.where(item: item).count).to eq(1)
     expect(users.map(&:id)).to include(item.reload.status.user_id)
   ensure
     workers&.each(&:join)
+    item&.reload&.status&.reset
     item&.destroy!
     users&.each(&:destroy!)
   end

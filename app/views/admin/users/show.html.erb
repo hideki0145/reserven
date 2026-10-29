@@ -1,7 +1,7 @@
 <h1>ユーザ詳細</h1>
 
 <div class="nav justify-content-end">
-  <%= link_to '一覧', admin_users_path, class: 'nav-link' %>
+  <%= link_to '一覧', admin_users_path, class: 'btn btn-outline-secondary' %>
 </div>
 <div class="table-responsive">
   <table class="table table-hover">
@@ -23,12 +23,16 @@
         <td><%= @user.admin? ? '○' : '×' %></td>
       </tr>
       <tr>
+        <th>アカウント</th>
+        <td><%= @user.disabled? ? '無効' : '有効' %></td>
+      </tr>
+      <tr>
         <th><%= User.human_attribute_name(:created_at) %></th>
-        <td><%= @user.created_at %></td>
+        <td><%= l @user.created_at, format: :timestamp %></td>
       </tr>
       <tr>
         <th><%= User.human_attribute_name(:updated_at) %></th>
-        <td><%= @user.updated_at %></td>
+        <td><%= l @user.updated_at, format: :timestamp %></td>
       </tr>
     </tbody>
   </table>

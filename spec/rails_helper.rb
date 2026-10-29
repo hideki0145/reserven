@@ -1,7 +1,6 @@
 ENV['RAILS_ENV'] ||= 'test'
 # Tests must not use the developer's Slack credentials.
-ENV.delete('SLACK_TOKEN')
-ENV.delete('SLACK_CHANNEL')
+ENV.delete('SLACK_WEBHOOK_URL')
 require_relative '../config/environment'
 abort('RSpec cannot run in production') if Rails.env.production?
 require 'rspec/rails'

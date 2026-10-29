@@ -23,4 +23,12 @@ RSpec.describe 'Rails platform defaults', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('ログインする')
   end
+
+  it 'serves current application JavaScript independently of production asset manifests' do
+    get login_path
+    source = Nokogiri::HTML(response.body).at_css('script[src]')['src']
+    get source
+    expect(response).to have_http_status(:ok)
+    expect(response.body.b).to eq(Rails.root.join('app/assets/javascripts/application.js').binread)
+  end
 end

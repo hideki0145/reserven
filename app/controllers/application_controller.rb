@@ -38,6 +38,13 @@ class ApplicationController < ActionController::Base
   def current_user
     if (user_id = session[:user_id])
       @current_user ||= User.find_by(id: user_id)
+      if @current_user && @current_user.disabled?
+        reset_session
+        cookies.delete(:user_id)
+        cookies.delete(:remember_token)
+        @current_user = nil
+      end
+      @current_user
     elsif (user_id = cookies.signed[:user_id])
       user = User.find_by(id: user_id)
       if user&.authenticated?(cookies[:remember_token])

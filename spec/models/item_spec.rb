@@ -12,3 +12,12 @@ RSpec.describe Item, type: :model do
     expect { item.destroy! }.to change(Status, :count).by(-1)
   end
 end
+
+RSpec.describe 'Item deletion protection', type: :model do
+  it 'keeps outstanding usage intact when deletion is rejected directly' do
+    item = Item.create!(name: '貸出PC')
+    status = Status.create!(item: item, user: create_user, use_flg: true, expires_at: 1.hour.from_now)
+    expect(item.destroy).to be(false)
+    expect(status.reload.use_flg).to be(true)
+  end
+end

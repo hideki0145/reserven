@@ -2,9 +2,13 @@
 <h3>こんにちは、 <%= "#{current_user.name}" %> さん</h3>
 <hr>
 
-<div class="mb-3"></div>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <span class="small text-body-secondary">最終更新: <%= time_tag Time.current, format: :timestamp %></span>
+  <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
+</div>
+<p class="small text-warning mb-3" data-refresh-paused role="status" hidden>入力中のため自動更新を停止しています。</p>
 <p class="small text-body-secondary d-md-none">表は横にスクロールできます。</p>
-<div class="table-responsive">
+<div class="table-responsive position-relative">
   <table class="table table-hover text-nowrap align-middle" data-auto-refresh>
     <thead class="table-light">
       <tr>
@@ -16,39 +20,51 @@
     <tbody>
       <% @items.each do |item| %>
         <tr>
-          <td><%= item.name %></td>
-          <% if item.status&.use?(current_user.id) %>
-            <% if item.status.user_id == current_user.id %>
-              <td><%= "自分が[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
-              <td>
+          <td class="fw-semibold"><%= item.name %></td>
+          <% status = item.status %>
+          <% in_use = (item.disabled? ? status&.use_flg? : status&.use?(current_user.id)) %>
+          <% grace_period = status&.grace_period? %>
+          <td>
+            <% if in_use || grace_period %>
+              <% if item.disabled? %>
+                <span class="badge rounded-pill text-bg-secondary fs-6 mb-2">利用停止中</span>
+              <% elsif grace_period %>
+                <span class="badge rounded-pill text-bg-warning fs-6 mb-2">🟠 猶予期間中</span>
+              <% else %>
+                <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
+              <% end %>
+              <div><span class="text-body-secondary">利用者:</span> <%= status.user.name %><%= '(自分)' if status.user_id == current_user.id %></div>
+              <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
+              <% if grace_period && !item.disabled? %>
+                <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
+              <% end %>
+            <% else %>
+              <span class="badge rounded-pill text-bg-light border fs-6">✅ 利用可能</span>
+            <% end %>
+          </td>
+          <% if in_use && status.user_id == current_user.id %>
+            <td>
+              <% unless item.disabled? %>
                 <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
-                  <%= f.label :expires_at, '延長後の使用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                  <%= f.time_field :expires_at, id: "extend_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                  <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
+                  <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
                   <span>まで</span>
                   <%= f.submit '延長する', class: 'btn btn-success' %>
                 <% end %>
-                <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
-                  <%= f.submit '使用終了', class: 'btn btn-primary' %>
-                <% end %>
-              </td>
-            <% else %>
-              <td><%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %></td>
-              <td></td>
-            <% end %>
-          <% elsif item.status&.grace_period? %>
-            <td>
-              <%= "#{item.status.user.name}さんが[#{l item.status.expires_at, format: :short}]迄 使用中" %><br>
-              <%= "(15分の猶予期間中)" %>
+              <% end %>
+              <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
+                <%= f.submit '利用終了', class: 'btn btn-primary' %>
+              <% end %>
             </td>
+          <% elsif in_use || grace_period %>
             <td></td>
           <% else %>
-            <td>未使用</td>
             <td>
               <%= form_with url: update_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
-                <%= f.label :expires_at, '使用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                <%= f.time_field :expires_at, id: "update_status_#{item.id}_expires_at", class: 'form-control w-auto', value: (Time.current + 60 * 15).strftime('%H:%M') %>
+                <%= f.label :expires_at, '利用期限', for: "update_status_#{item.id}_expires_at", class: 'visually-hidden' %>
+                <%= render 'deadline_field', f: f, field_id: "update_status_#{item.id}_expires_at", deadline: Time.current + 15.minutes %>
                 <span>まで</span>
-                <%= f.submit '使用する', class: 'btn btn-primary' %>
+                <%= f.submit '利用する', class: 'btn btn-primary' %>
               <% end %>
             </td>
           <% end %>
@@ -57,3 +73,12 @@
     </tbody>
   </table>
 </div>
+
+<dialog id="deadline-confirmation" aria-labelledby="deadline-confirmation-title" class="border rounded p-4 shadow" data-preview-url="<%= deadline_preview_path %>">
+  <h2 id="deadline-confirmation-title" class="h4">日付をまたぐ利用の確認</h2>
+  <p data-confirmation-message class="alert alert-warning my-3"></p>
+  <form method="dialog" class="d-flex justify-content-end gap-2">
+    <button value="cancel" class="btn btn-outline-secondary" autofocus>戻る</button>
+    <button value="confirm" class="btn btn-primary">確定する</button>
+  </form>
+</dialog>

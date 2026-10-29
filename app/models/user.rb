@@ -3,10 +3,20 @@ class User < ApplicationRecord
 
   has_secure_password
 
+  normalizes :email, with: ->(email) { email.strip.downcase }
+
   has_many :statuses, dependent: :destroy
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true
+
+  scope :active_admins, -> { where(admin: true, disabled: false) }
+
+  before_update :protect_last_active_admin, if: -> {
+    admin_in_database && !disabled_in_database && (!admin? || disabled?)
+  }
+  before_destroy :protect_last_active_admin, prepend: true, if: -> { admin_in_database && !disabled_in_database }
+  before_update :revoke_login_on_disable, if: -> { will_save_change_to_disabled? && disabled? }
 
   def create_remember_digest
     self.remember_token = User.new_token
@@ -20,7 +30,7 @@ class User < ApplicationRecord
   end
 
   def authenticated?(remember_token)
-    return false if remember_digest.nil? || remember_token.blank?
+    return false if disabled? || remember_digest.nil? || remember_token.blank?
 
     BCrypt::Password.new(remember_digest).is_password?(remember_token)
   end
@@ -32,5 +42,18 @@ class User < ApplicationRecord
 
   def self.new_token
     SecureRandom.urlsafe_base64
+  end
+
+  private
+
+  def protect_last_active_admin
+    return if User.active_admins.where.not(id: id).exists?
+
+    errors.add(:base, '有効な管理者を少なくとも1人残してください。')
+    throw :abort
+  end
+
+  def revoke_login_on_disable
+    self.remember_digest = nil
   end
 end

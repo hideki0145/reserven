@@ -1,4 +1,7 @@
 ja:
+  time:
+    formats:
+      timestamp: '%Y/%m/%d %H:%M:%S'
   activerecord:
     models:
       user: ユーザ
@@ -10,18 +13,20 @@ ja:
         name: 名前
         email: メールアドレス
         admin: 管理者権限
+        disabled: アカウント無効
         password: パスワード
         password_confirmation: パスワード(確認)
         created_at: 登録日時
         updated_at: 更新日時
       item:
+        disabled: アイテム無効
         id: ID
         name: 名前
         created_at: 登録日時
         updated_at: 更新日時
       status:
         id: ID
-        use_flg: 使用中
-        expires_at: 使用期限
+        use_flg: 利用中
+        expires_at: 利用期限
         created_at: 登録日時
         updated_at: 更新日時
