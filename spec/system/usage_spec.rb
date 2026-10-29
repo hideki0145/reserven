@@ -17,7 +17,10 @@ RSpec.describe 'Browser usage', type: :system do
     expect(page.evaluate_script("getComputedStyle(document.querySelector('.btn-success')).backgroundColor")).to eq('rgb(40, 167, 69)')
     click_button '利用終了'
     expect(page).to have_css('.badge', text: '✅ 利用可能')
-    click_button 'ログアウト'
+    dismiss_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
+    expect(page).to have_content(user.name)
+    expect(page).to have_button('ログアウト')
+    accept_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_current_path(login_path)
   ensure
     travel_back
@@ -118,7 +121,7 @@ RSpec.describe 'Browser usage', type: :system do
     click_link 'アイテム一覧'
     expect(page).to have_content('アイテム一覧')
     find('[data-navigation-toggle]').click
-    click_button 'ログアウト'
+    accept_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_current_path(login_path)
   end
 end
