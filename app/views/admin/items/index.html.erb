@@ -1,4 +1,4 @@
-<h1>アイテム一覧</h1>
+<h1 class="h4">アイテム一覧</h1>
 
 <%= link_to '新規登録', new_admin_item_path, class: 'btn btn-primary' %>
 
@@ -16,6 +16,11 @@
       </tr>
     </thead>
     <tbody>
+      <% if @items.empty? %>
+        <tr>
+          <td colspan="5" class="text-body-secondary">アイテムが登録されていません。</td>
+        </tr>
+      <% end %>
       <% @items.each do |item| %>
         <tr>
           <td><%= link_to item.name, [:admin, item] %></td>

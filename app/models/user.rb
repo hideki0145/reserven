@@ -12,11 +12,14 @@ class User < ApplicationRecord
 
   scope :active_admins, -> { where(admin: true, disabled: false) }
 
+  before_destroy :reject_deletion_with_outstanding_usage, prepend: true
   before_update :protect_last_active_admin, if: -> {
     admin_in_database && !disabled_in_database && (!admin? || disabled?)
   }
   before_destroy :protect_last_active_admin, prepend: true, if: -> { admin_in_database && !disabled_in_database }
-  before_update :revoke_login_on_disable, if: -> { will_save_change_to_disabled? && disabled? }
+  before_update :revoke_remember_login, if: -> {
+    will_save_change_to_password_digest? || (will_save_change_to_disabled? && disabled?)
+  }
 
   def create_remember_digest
     self.remember_token = User.new_token
@@ -46,6 +49,13 @@ class User < ApplicationRecord
 
   private
 
+  def reject_deletion_with_outstanding_usage
+    return unless statuses.where(use_flg: true).exists?
+
+    errors.add(:base, '利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
+    throw :abort
+  end
+
   def protect_last_active_admin
     return if User.active_admins.where.not(id: id).exists?
 
@@ -53,7 +63,7 @@ class User < ApplicationRecord
     throw :abort
   end
 
-  def revoke_login_on_disable
+  def revoke_remember_login
     self.remember_digest = nil
   end
 end

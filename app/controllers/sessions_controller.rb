@@ -1,5 +1,6 @@
 class SessionsController < ApplicationController
   skip_before_action :login_required
+  before_action :retain_login_input, only: :create
 
   LOGIN_RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
   rate_limit to: 10, within: 3.minutes, only: :create,
@@ -26,6 +27,14 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  def retain_login_input
+    input = params[:session]
+    return unless input.is_a?(ActionController::Parameters)
+
+    @login_email = input[:email] if input[:email].is_a?(String)
+    @remember_login = input[:remember_cookies] == '1'
+  end
 
   def login_rate_limit_exceeded
     response.set_header('Retry-After', '180')

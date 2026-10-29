@@ -1,4 +1,4 @@
-<h1>ユーザ一覧</h1>
+<h1 class="h4">ユーザ一覧</h1>
 
 <%= link_to '新規登録', new_admin_user_path, class: 'btn btn-primary' %>
 
@@ -18,6 +18,11 @@
       </tr>
     </thead>
     <tbody>
+      <% if @users.empty? %>
+        <tr>
+          <td colspan="7" class="text-body-secondary">ユーザが登録されていません。</td>
+        </tr>
+      <% end %>
       <% @users.each do |user| %>
         <tr>
           <td><%= link_to user.name, [:admin, user] %></td>

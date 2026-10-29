@@ -1,8 +1,6 @@
-require 'net/https'
-
 class StatusesController < ApplicationController
   def home
-    @items = Item.visible_on_status.includes(status: :user)
+    @items = Item.visible_on_status.order(:id).includes(status: :user)
   end
 
   def deadline_preview
@@ -23,7 +21,7 @@ class StatusesController < ApplicationController
 
       if item.status.blank?
         item.build_status
-      elsif item.status.use?(current_user.id) || item.status.grace_period?
+      elsif !item.can_start_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は既に利用中です。"
         return
       end
@@ -33,7 +31,7 @@ class StatusesController < ApplicationController
 
       item.status.set(current_user.id, expires_at)
     end
-    post_slack(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: item.status.expires_at))
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: item.status.expires_at))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
@@ -48,7 +46,7 @@ class StatusesController < ApplicationController
       if item.status.blank? || !item.status.use_flg?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
-      elsif item.status.user_id != current_user.id
+      elsif !item.can_extend_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end
@@ -64,8 +62,8 @@ class StatusesController < ApplicationController
       previous_expires_at = item.status.expires_at
       item.status.set(current_user.id, expires_at)
     end
-    post_slack(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
-                                          expires_at: item.status.expires_at, previous_expires_at: previous_expires_at))
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
+                                                     expires_at: item.status.expires_at, previous_expires_at: previous_expires_at))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l item.status.expires_at, format: :short}]迄 利用延長します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
@@ -78,13 +76,13 @@ class StatusesController < ApplicationController
       if status.nil? || !status.use_flg?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
-      elsif status.user_id != current_user.id
+      elsif !item.can_end_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end
       status.reset
     end
-    post_slack(SlackUsageNotification.build(event: :end, item: item, user: current_user))
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :end, item: item, user: current_user))
     redirect_to status_path, notice: "#{item.name}を利用終了しました。"
   end
 
@@ -106,31 +104,5 @@ class StatusesController < ApplicationController
     @operation = operation
     render :confirm_deadline
     true
-  end
-
-  def post_slack(payload)
-    webhook_url = ENV['SLACK_WEBHOOK_URL']
-    if webhook_url.blank?
-      logger.debug { "Slack通知スキップ(Webhook未設定): #{payload[:text]}" }
-      return
-    end
-
-    uri = URI.parse(webhook_url)
-    unless uri.is_a?(URI::HTTPS) && uri.host.present?
-      logger.warn 'Slack notification failed (invalid webhook URL)'
-      return
-    end
-
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.open_timeout = 5
-    http.read_timeout = 5
-    req = Net::HTTP::Post.new(uri.request_uri)
-    req['Content-Type'] = 'application/json'
-    req.body = payload.to_json
-    response = http.request(req)
-    logger.warn "Slack notification failed (HTTP #{response.code})" unless response.is_a?(Net::HTTPSuccess)
-  rescue URI::InvalidURIError, Timeout::Error, SocketError, SystemCallError, OpenSSL::SSL::SSLError, EOFError => e
-    logger.warn "Slack notification failed (#{e.class})"
   end
 end

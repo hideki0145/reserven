@@ -26,7 +26,10 @@
   </div>
   <div class="mb-3">
     <%= f.label :password, 'パスワード', class: 'form-label' %>
-    <%= f.password_field :password, class: 'form-control' %>
+    <%= f.password_field :password, class: 'form-control', aria: { describedby: user.persisted? ? 'password-help' : nil } %>
+    <% if user.persisted? %>
+      <div id="password-help" class="form-text">変更する場合のみ入力してください。</div>
+    <% end %>
   </div>
   <div class="mb-3">
     <%= f.label :password_confirmation, 'パスワード(確認)', class: 'form-label' %>
