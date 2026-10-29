@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const fields = Array.from(document.querySelectorAll('[data-deadline-field] input'));
   const hasChanges = () => fields.some(field => field.value !== field.defaultValue);
   const notice = document.querySelector('[data-refresh-paused]');
-  const updateNotice = () => { notice.hidden = !hasChanges(); };
+  const activeNotice = document.querySelector('[data-refresh-active]');
+  const updateNotice = () => {
+    const paused = hasChanges();
+    notice.classList.toggle('invisible', !paused);
+    activeNotice.classList.toggle('invisible', paused);
+  };
   document.addEventListener('input', updateNotice);
   document.addEventListener('change', updateNotice);
   updateNotice();

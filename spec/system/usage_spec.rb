@@ -115,11 +115,13 @@ RSpec.describe 'Browser usage', type: :system do
     find('[data-navigation-toggle]').click
     click_link 'ユーザ一覧'
     expect(page).to have_content('ユーザ一覧')
+    expect(page).to have_css('h1.h4', text: 'ユーザ一覧')
     expect(page).to have_css('.table-responsive table')
     expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
     find('[data-navigation-toggle]').click
     click_link 'アイテム一覧'
     expect(page).to have_content('アイテム一覧')
+    expect(page).to have_css('h1.h4', text: 'アイテム一覧')
     find('[data-navigation-toggle]').click
     accept_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_current_path(login_path)

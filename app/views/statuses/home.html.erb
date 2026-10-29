@@ -1,12 +1,16 @@
-<div class="status-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pb-3 border-bottom">
+<div class="status-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pb-3 mb-3 border-bottom">
   <p class="status-greeting mb-0">こんにちは、 <strong><%= current_user.name %></strong> さん</p>
-  <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
-    <span class="small text-body-secondary">最終更新: <%= time_tag Time.current, format: :timestamp %></span>
-    <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
+  <div class="text-md-end">
+    <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+      <span class="small text-body-secondary">最終更新: <%= time_tag Time.current, format: :timestamp %></span>
+      <%= link_to '更新', status_path, class: 'btn btn-outline-secondary btn-sm', data: { refresh_status: true } %>
+    </div>
+    <div class="status-refresh-notice small mt-1" role="status">
+      <span class="text-body-secondary" data-refresh-active>10分毎に自動更新されます。</span>
+      <span class="text-warning invisible" data-refresh-paused>入力中のため自動更新を停止しています。</span>
+    </div>
   </div>
 </div>
-<p class="small text-warning mb-3" data-refresh-paused role="status" hidden>入力中のため自動更新を停止しています。</p>
-<p class="small text-body-secondary d-md-none mt-2">利用状況は10分毎に自動更新されます。</p>
 <div class="status-list table-responsive position-relative">
   <table class="status-table table table-hover text-nowrap align-middle" role="table" aria-label="アイテムの利用状況" data-auto-refresh>
     <thead class="table-light">

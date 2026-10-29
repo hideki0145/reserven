@@ -17,6 +17,26 @@ RSpec.describe 'Status refresh', type: :system do
     page.driver.with_playwright_page { |browser_page| browser_page.clock.fast_forward(600_001) }
   end
 
+  [1440, 390, 320].each do |width|
+    it "keeps input in place when the paused notice appears and disappears at #{width}px" do
+      page.current_window.resize_to(width, 900)
+      prepare_page
+      position = "document.querySelector('input[type=\"time\"]').getBoundingClientRect().top"
+      original_value = find('input[type="time"]').value
+      original_top = page.evaluate_script(position)
+      expect(page).to have_css('.status-header [data-refresh-active]', text: '10分毎に自動更新されます。')
+      fill_in '利用期限', with: '20:00'
+      expect(page).to have_content('入力中のため自動更新を停止しています。')
+      expect(page).not_to have_css('[data-refresh-active]', visible: true)
+      expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
+      expect(page.evaluate_script(position)).to eq(original_top)
+      fill_in '利用期限', with: original_value
+      expect(page).not_to have_content('入力中のため自動更新を停止しています。')
+      expect(page).to have_css('[data-refresh-active]', text: '10分毎に自動更新されます。')
+      expect(page.evaluate_script(position)).to eq(original_top)
+    end
+  end
+
   it 'refreshes an untouched page after ten minutes and displays its update time' do
     prepare_page
     expect(page).to have_content('最終更新: 2026/10/28 19:30:00')
