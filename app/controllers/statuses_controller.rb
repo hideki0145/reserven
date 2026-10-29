@@ -21,7 +21,7 @@ class StatusesController < ApplicationController
 
       if item.status.blank?
         item.build_status
-      elsif item.status.use?(current_user.id) || item.status.grace_period?
+      elsif !item.can_start_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は既に利用中です。"
         return
       end
@@ -46,7 +46,7 @@ class StatusesController < ApplicationController
       if item.status.blank? || !item.status.use_flg?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
-      elsif item.status.user_id != current_user.id
+      elsif !item.can_extend_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end
@@ -76,7 +76,7 @@ class StatusesController < ApplicationController
       if status.nil? || !status.use_flg?
         redirect_to status_path, notice: "#{item.name}は利用中ではありません。"
         return
-      elsif status.user_id != current_user.id
+      elsif !item.can_end_usage?(current_user.id)
         redirect_to status_path, notice: "#{item.name}は自分が利用中ではありません。"
         return
       end

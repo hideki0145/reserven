@@ -22,34 +22,32 @@
         <tr>
           <td class="fw-semibold"><%= item.name %></td>
           <% status = item.status %>
-          <% in_use = (item.disabled? ? status&.use_flg? : status&.use?(current_user.id)) %>
-          <% grace_period = status&.grace_period? %>
-          <% expired = in_use && !grace_period && status.expires_at <= Time.current %>
+          <% state = item.usage_state(current_user.id) %>
           <td>
-            <% if in_use || grace_period %>
-              <% if item.disabled? %>
+            <% if state != :available %>
+              <% if state == :stopped %>
                 <span class="badge rounded-pill text-bg-secondary fs-6 mb-2">利用停止中</span>
-              <% elsif grace_period %>
+              <% elsif state == :grace_period %>
                 <span class="badge rounded-pill text-bg-warning fs-6 mb-2">🟠 猶予期間中</span>
-              <% elsif expired %>
+              <% elsif state == :expired %>
                 <span class="badge rounded-pill text-bg-danger fs-6 mb-2">⏰ 期限切れ</span>
               <% else %>
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
               <% end %>
               <div><span class="text-body-secondary">利用者:</span> <%= status.user.name %><%= '(自分)' if status.user_id == current_user.id %></div>
               <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
-              <% if grace_period && !item.disabled? %>
+              <% if state == :grace_period %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
-              <% elsif expired && !item.disabled? %>
+              <% elsif state == :expired %>
                 <div class="small text-body-secondary mt-1">他の利用者は利用を開始できます。</div>
               <% end %>
             <% else %>
               <span class="badge rounded-pill text-bg-light border fs-6">✅ 利用可能</span>
             <% end %>
           </td>
-          <% if in_use && status.user_id == current_user.id %>
+          <% if item.can_end_usage?(current_user.id) %>
             <td>
-              <% unless item.disabled? %>
+              <% if item.can_extend_usage?(current_user.id) %>
                 <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-2' do |f| %>
                   <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
                   <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
@@ -61,7 +59,7 @@
                 <%= f.submit '利用終了', class: 'btn btn-primary' %>
               <% end %>
             </td>
-          <% elsif in_use || grace_period %>
+          <% elsif !item.can_start_usage?(current_user.id) %>
             <td></td>
           <% else %>
             <td>
