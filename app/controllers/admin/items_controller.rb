@@ -49,7 +49,7 @@ class Admin::ItemsController < ApplicationController
   private
 
   def item_params
-    params.require(:item).permit(:name, :disabled)
+    params.require(:item).permit(:name, :disabled, :reason_policy)
   end
 
   def require_admin

@@ -6,7 +6,7 @@ document.addEventListener('submit', (event) => {
 document.addEventListener('DOMContentLoaded', () => {
   if (!document.querySelector('[data-auto-refresh]')) return;
 
-  const fields = Array.from(document.querySelectorAll('[data-deadline-field] input'));
+  const fields = Array.from(document.querySelectorAll('[data-deadline-field] input, [data-usage-reason]'));
   const hasChanges = () => fields.some(field => field.value !== field.defaultValue);
   const notice = document.querySelector('[data-refresh-paused]');
   const activeNotice = document.querySelector('[data-refresh-active]');

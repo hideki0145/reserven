@@ -10,12 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000001) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "disabled", default: false, null: false
+    t.string "reason_policy", default: "none", null: false
   end
 
   create_table "usages", force: :cascade do |t|
@@ -35,6 +36,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
     t.string "created_by_name_snapshot"
     t.integer "updated_by_id"
     t.string "updated_by_name_snapshot"
+    t.text "reason"
     t.index ["created_by_id"], name: "index_usages_on_created_by_id"
     t.index ["finished_by_id"], name: "index_usages_on_finished_by_id"
     t.index ["item_id", "finished_at"], name: "index_usages_on_item_id_and_finished_at"

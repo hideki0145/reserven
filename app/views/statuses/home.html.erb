@@ -45,6 +45,7 @@
               <% end %>
               <div><span class="text-body-secondary">利用者:</span> <%= usage.user.name %><%= '(自分)' if usage.user_id == current_user.id %></div>
               <div><span class="text-body-secondary">利用期限:</span> <%= l usage.ends_at, format: '%m/%d(%a) %H:%M' %></div>
+              <% if usage.reason.present? %><div class="usage-reason"><span class="text-body-secondary">利用理由:</span> <%= usage.reason %></div><% end %>
               <% if state == :grace_period %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
               <% elsif state == :expired %>
@@ -77,6 +78,13 @@
                 <%= render 'deadline_field', f: f, field_id: "update_status_#{item.id}_expires_at", deadline: Time.current + 15.minutes %>
                 <span class="pt-2">まで</span>
                 <%= f.submit '利用する', class: 'btn btn-primary' %>
+                <% unless item.reason_policy_none? %>
+                  <div class="usage-reason-field">
+                    <%= f.label :reason, "利用理由(#{item.reason_policy_required? ? '必須' : '任意'})", for: "usage_#{item.id}_reason", class: 'form-label small mb-1' %>
+                    <%= f.text_area :reason, id: "usage_#{item.id}_reason", value: @failed_item_id == item.id ? @reason_input : nil, rows: 2, maxlength: 500, required: item.reason_policy_required?, class: 'form-control', data: { usage_reason: true } %>
+                    <div class="form-text">500文字以内で入力してください。</div>
+                  </div>
+                <% end %>
               <% end %>
             </td>
           <% end %>

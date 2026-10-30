@@ -1,5 +1,5 @@
 class SlackUsageNotification
-  def self.build(event:, item:, user:, expires_at: nil, previous_expires_at: nil)
+  def self.build(event:, item:, user:, expires_at: nil, previous_expires_at: nil, reason: nil)
     case event
     when :start
       title = "🔵 #{item.name} の利用を開始"
@@ -27,6 +27,10 @@ class SlackUsageNotification
       lines << "*利用期限*: #{deadline(expires_at)}"
     else
       lines << "*#{label}*: #{value}"
+    end
+    if reason.present?
+      lines << "*利用理由*: #{escape(reason)}"
+      text += " 利用理由: #{escape(reason)}"
     end
     details = { type: 'section', text: { type: 'mrkdwn', text: lines.join("\n"), verbatim: true } }
 

@@ -3,6 +3,7 @@ class Item < ApplicationRecord
   has_one :current_usage, -> { unfinished.order(id: :desc) }, class_name: 'Usage'
 
   validates :name, presence: true
+  enum :reason_policy, { none: 'none', optional: 'optional', required: 'required' }, prefix: true, validate: true
 
   scope :visible_on_status, -> {
     left_joins(:current_usage).where('items.disabled = ? OR usages.id IS NOT NULL', false)
@@ -32,10 +33,10 @@ class Item < ApplicationRecord
   end
 
   # The caller holds the item's lock while checking availability and starting usage.
-  def start_usage!(user, ends_at)
+  def start_usage!(user, ends_at, reason: nil)
     transaction do
       current_usage&.finish!(user, reason: 'reassigned')
-      usages.create!(user: user, starts_at: Time.current, ends_at: ends_at)
+      usages.create!(user: user, starts_at: Time.current, ends_at: ends_at, reason: reason)
     end.tap { association(:current_usage).reset }
   end
 

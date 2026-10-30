@@ -28,12 +28,20 @@ class StatusesController < ApplicationController
       expires_at = UsageDeadline.parse(params[:expires_at])
       return if confirm_overnight_usage(item, expires_at, :start)
 
-      usage = item.start_usage!(current_user, expires_at)
+      usage = item.start_usage!(current_user, expires_at, reason: params.permit(:reason)[:reason])
     end
-    SlackNotifier.deliver(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: usage.ends_at))
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :start, item: item, user: current_user, expires_at: usage.ends_at, reason: usage.reason))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l usage.ends_at, format: :short}]迄 利用します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless e.record.is_a?(Usage)
+
+    home
+    @failed_item_id = item.id
+    @reason_input = params.permit(:reason)[:reason]
+    flash.now[:alert] = e.record.errors.full_messages.join(' ')
+    render :home, status: :unprocessable_content
   end
 
   def extend_status
@@ -64,7 +72,7 @@ class StatusesController < ApplicationController
       usage.extend!(expires_at, current_user)
     end
     SlackNotifier.deliver(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
-                                                     expires_at: usage.ends_at, previous_expires_at: previous_expires_at))
+                                                     expires_at: usage.ends_at, previous_expires_at: previous_expires_at, reason: usage.reason))
     redirect_to status_path, notice: "#{item.name}を[#{I18n.l usage.ends_at, format: :short}]迄 利用延長します。"
   rescue UsageDeadline::Invalid => e
     redirect_to status_path, alert: e.message
@@ -72,6 +80,7 @@ class StatusesController < ApplicationController
 
   def end_use_status
     item = Item.find(params[:id])
+    usage = nil
     item.with_lock do
       usage = item.current_usage
       if usage.nil?
@@ -83,7 +92,7 @@ class StatusesController < ApplicationController
       end
       usage.finish!(current_user)
     end
-    SlackNotifier.deliver(SlackUsageNotification.build(event: :end, item: item, user: current_user))
+    SlackNotifier.deliver(SlackUsageNotification.build(event: :end, item: item, user: current_user, reason: usage.reason))
     redirect_to status_path, notice: "#{item.name}を利用終了しました。"
   end
 

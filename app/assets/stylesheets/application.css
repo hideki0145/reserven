@@ -53,6 +53,18 @@
   overflow-wrap: anywhere;
 }
 
+.usage-reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 28rem;
+}
+
+.usage-reason-field {
+  white-space: normal;
+  width: 100%;
+  max-width: 28rem;
+}
+
 .status-refresh-notice {
   display: grid;
 }

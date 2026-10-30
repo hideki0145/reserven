@@ -16,5 +16,10 @@
     <%= f.label :disabled, 'アイテム無効', class: 'form-check-label' %>
     <div class="form-text">無効にすると新規利用・延長を停止します。利用中でも終了操作はできます。</div>
   </div>
+  <div class="mb-3">
+    <%= f.label :reason_policy, '利用理由', class: 'form-label' %>
+    <%= f.select :reason_policy, [['入力しない', 'none'], ['任意', 'optional'], ['必須', 'required']], {}, class: 'form-select' %>
+    <div class="form-text">新しく利用を開始するときに適用します。登録済みの理由は変更・削除しません。</div>
+  </div>
   <%= f.submit(item.persisted? ? '更新する' : '登録する', class: 'btn btn-primary') %>
 <% end %>

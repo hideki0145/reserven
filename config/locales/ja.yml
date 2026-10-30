@@ -19,12 +19,14 @@ ja:
         created_at: 登録日時
         updated_at: 更新日時
       item:
+        reason_policy: 利用理由の入力設定
         disabled: アイテム無効
         id: ID
         name: 名前
         created_at: 登録日時
         updated_at: 更新日時
       usage:
+        reason: 利用理由
         id: ID
         starts_at: 開始日時
         ends_at: 利用期限
