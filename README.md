@@ -313,6 +313,8 @@ sqlite3 -readonly "$backup_file" 'PRAGMA quick_check;'
 DB移行時はアプリ停止後にバックアップを取得し、更新後の動作確認が済むまで保管してください。
 同時書き込みは直列化されるため、大量の更新や複数サーバへの拡張時は構成を見直します。
 
+ヘッダのReserven左側には、faviconと共通の`public/icon.svg`を表示します。
+
 ### アセットの配信
 
 Bootstrap 5.3.8のCSSはjsDelivr CDNから読み込みます。
