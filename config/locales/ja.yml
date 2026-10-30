@@ -9,6 +9,7 @@ ja:
       usage: ステータス
     attributes:
       user:
+        usage_manager: 利用管理者
         id: ID
         name: 名前
         email: メールアドレス
@@ -19,6 +20,7 @@ ja:
         created_at: 登録日時
         updated_at: 更新日時
       item:
+        usage_mode: 利用方式
         reason_policy: 利用理由の入力設定
         disabled: アイテム無効
         id: ID
@@ -26,6 +28,7 @@ ja:
         created_at: 登録日時
         updated_at: 更新日時
       usage:
+        usage_kind: 利用方式
         reason: 利用理由
         id: ID
         starts_at: 開始日時

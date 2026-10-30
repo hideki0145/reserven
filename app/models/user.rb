@@ -10,6 +10,7 @@ class User < ApplicationRecord
   has_many :finished_usages, class_name: 'Usage', foreign_key: :finished_by_id, dependent: :nullify
   has_many :created_usages, class_name: 'Usage', foreign_key: :created_by_id, dependent: :nullify
   has_many :updated_usages, class_name: 'Usage', foreign_key: :updated_by_id, dependent: :nullify
+  has_many :cancelled_usages, class_name: 'Usage', foreign_key: :cancelled_by_id, dependent: :nullify
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true
@@ -54,7 +55,11 @@ class User < ApplicationRecord
   private
 
   def reject_deletion_with_outstanding_usage
-    return unless usages.unfinished.exists?
+    if usages.reservations.outstanding.exists?
+      errors.add(:base, '有効な予約があるため削除できません。予約を整理するか、アカウントを無効化してください。')
+      throw :abort
+    end
+    return unless usages.immediates.unfinished.exists?
 
     errors.add(:base, '利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
     throw :abort

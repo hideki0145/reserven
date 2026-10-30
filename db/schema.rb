@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000003) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000002) do
     t.boolean "disabled", default: false, null: false
     t.string "reason_policy", default: "none", null: false
     t.integer "seq", default: 0, null: false
+    t.string "usage_mode", default: "immediate", null: false
     t.index ["seq"], name: "index_items_on_seq"
   end
 
@@ -39,11 +40,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000002) do
     t.integer "updated_by_id"
     t.string "updated_by_name_snapshot"
     t.text "reason"
+    t.string "usage_kind", default: "immediate", null: false
+    t.string "reason_policy_snapshot"
+    t.datetime "cancelled_at"
+    t.integer "cancelled_by_id"
+    t.string "cancelled_by_name_snapshot"
+    t.index ["cancelled_by_id"], name: "index_usages_on_cancelled_by_id"
     t.index ["created_by_id"], name: "index_usages_on_created_by_id"
     t.index ["finished_by_id"], name: "index_usages_on_finished_by_id"
     t.index ["item_id", "finished_at"], name: "index_usages_on_item_id_and_finished_at"
+    t.index ["item_id", "usage_kind", "starts_at", "ends_at"], name: "index_usages_on_reservation_period"
     t.index ["item_id"], name: "index_usages_on_item_id"
     t.index ["updated_by_id"], name: "index_usages_on_updated_by_id"
+    t.index ["usage_kind", "ends_at"], name: "index_usages_on_usage_kind_and_ends_at"
     t.index ["user_id"], name: "index_usages_on_user_id"
   end
 
@@ -57,12 +66,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000002) do
     t.string "remember_digest"
     t.boolean "disabled", default: false, null: false
     t.integer "seq", default: 0, null: false
+    t.boolean "usage_manager", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["seq"], name: "index_users_on_seq"
   end
 
   add_foreign_key "usages", "items"
   add_foreign_key "usages", "users"
+  add_foreign_key "usages", "users", column: "cancelled_by_id"
   add_foreign_key "usages", "users", column: "created_by_id"
   add_foreign_key "usages", "users", column: "finished_by_id"
   add_foreign_key "usages", "users", column: "updated_by_id"
