@@ -31,12 +31,16 @@ RSpec.describe 'Concurrent item usage', type: :request do
 
     expect(results.map(&:first)).to eq([302, 302])
     expect(results.count { |_, notice| notice.include?('既に利用中') }).to eq(1)
-    expect(Status.where(item: item).count).to eq(1)
-    expect(users.map(&:id)).to include(item.reload.status.user_id)
+    expect(Usage.where(item: item).count).to eq(1)
+    expect(users.map(&:id)).to include(item.reload.current_usage.user_id)
   ensure
     workers&.each(&:join)
-    item&.reload&.status&.reset
+    history_ids = Usage.where(item: item).pluck(:id) if item
+    if (status = item&.reload&.current_usage)
+      status.finish!(status.user)
+    end
     item&.destroy!
     users&.each(&:destroy!)
+    Usage.where(id: history_ids).delete_all if history_ids
   end
 end

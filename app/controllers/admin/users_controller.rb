@@ -1,8 +1,10 @@
 class Admin::UsersController < ApplicationController
+  include AdminOrdering
+  helper_method :ordering_model, :ordering_index_path, :ordering_edit_path, :ordering_save_path
   before_action :require_admin
 
   def index
-    @users = User.order(:id)
+    @users = User.in_order
   end
 
   def show
@@ -56,6 +58,22 @@ class Admin::UsersController < ApplicationController
 
   def user_params
     params.require(:user).permit(:name, :email, :admin, :disabled, :password, :password_confirmation)
+  end
+
+  def ordering_model
+    User
+  end
+
+  def ordering_index_path
+    admin_users_path
+  end
+
+  def ordering_edit_path
+    reorder_admin_users_path
+  end
+
+  def ordering_save_path
+    update_order_admin_users_path
   end
 
   def require_admin

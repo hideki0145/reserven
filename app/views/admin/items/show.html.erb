@@ -18,6 +18,7 @@
         <th>状態</th>
         <td><%= @item.disabled? ? '無効' : '有効' %></td>
       </tr>
+      <tr><th>利用理由</th><td><%= { 'none' => '入力しない', 'optional' => '任意', 'required' => '必須' }.fetch(@item.reason_policy) %></td></tr>
       <tr>
         <th><%= Item.human_attribute_name(:created_at) %></th>
         <td><%= l @item.created_at, format: :timestamp %></td>

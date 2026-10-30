@@ -6,7 +6,7 @@ ja:
     models:
       user: ユーザ
       item: アイテム
-      status: ステータス
+      usage: ステータス
     attributes:
       user:
         id: ID
@@ -19,14 +19,16 @@ ja:
         created_at: 登録日時
         updated_at: 更新日時
       item:
+        reason_policy: 利用理由の入力設定
         disabled: アイテム無効
         id: ID
         name: 名前
         created_at: 登録日時
         updated_at: 更新日時
-      status:
+      usage:
+        reason: 利用理由
         id: ID
-        use_flg: 利用中
-        expires_at: 利用期限
+        starts_at: 開始日時
+        ends_at: 利用期限
         created_at: 登録日時
         updated_at: 更新日時

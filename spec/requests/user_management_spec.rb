@@ -60,10 +60,10 @@ RSpec.describe 'User account management', type: :request do
   it 'preserves usage when disabling an account and allows reactivation' do
     other = create_user
     item = Item.create!(name: '貸出PC')
-    status = Status.create!(item: item, user: other, use_flg: true, expires_at: 1.hour.from_now)
+    status = create_usage(item: item, user: other, active: true, expires_at: 1.hour.from_now)
     patch admin_user_path(other), params: { user: { disabled: '1' } }
     expect(other.reload).to be_disabled
-    expect(status.reload.use_flg).to be(true)
+    expect(status.reload.unfinished?).to be(true)
     patch admin_user_path(other), params: { user: { disabled: '0' } }
     expect(other.reload).not_to be_disabled
   end
@@ -72,13 +72,13 @@ RSpec.describe 'User account management', type: :request do
     it "rejects deletion of an account with overdue usage even when disabled is #{disabled}" do
       other = create_user(disabled: disabled)
       item = Item.create!(name: '利用中の停止PC', disabled: true)
-      status = Status.create!(item: item, user: other, use_flg: true, expires_at: 1.hour.ago)
+      status = create_usage(item: item, user: other, active: true, expires_at: 1.hour.ago)
 
       expect { delete admin_user_path(other) }.not_to change(User, :count)
       expect(response).to redirect_to(admin_user_path(other))
       follow_redirect!
       expect(response.body).to include('利用終了していないアイテムがあるため削除できません。')
-      expect(status.reload.use_flg).to be(true)
+      expect(status.reload.unfinished?).to be(true)
       expect(status.user_id).to eq(other.id)
       get status_path
       expect(response.body).to include(item.name, other.name, '利用停止中')
@@ -88,16 +88,16 @@ RSpec.describe 'User account management', type: :request do
   it 'allows deletion after the owner ends all outstanding usage' do
     other = create_user
     item = Item.create!(name: '返却対象PC')
-    status = Status.create!(item: item, user: other, use_flg: true, expires_at: 1.hour.ago)
+    status = create_usage(item: item, user: other, active: true, expires_at: 1.hour.ago)
     client = ActionDispatch::Integration::Session.new(Rails.application)
     client.post login_path, params: { session: { email: other.email, password: 'test-password' } }
     client.post end_use_status_path(item)
     expect(client.response.location).to eq("http://www.example.com#{status_path}")
-    expect(status.reload.use_flg).to be(false)
+    expect(status.reload.unfinished?).to be(false)
 
     expect { delete admin_user_path(other) }.to change(User, :count).by(-1)
     expect(response).to redirect_to(admin_users_path)
-    expect(Status.exists?(status.id)).to be(false)
+    expect(Usage.find(status.id).user_id).to be_nil
     expect(Item.exists?(item.id)).to be(true)
   end
 

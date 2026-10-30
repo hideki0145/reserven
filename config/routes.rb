@@ -17,13 +17,24 @@ Rails.application.routes.draw do
   post '/login', to: 'sessions#create'
   delete '/logout', to: 'sessions#destroy'
   get '/status', to: 'statuses#home'
+  get '/history', to: 'usage_histories#index', as: 'usage_histories'
   post '/status/deadline_preview', to: 'statuses#deadline_preview', as: 'deadline_preview'
   post '/update_status/:id', to: 'statuses#update_status', as: 'update_status'
   post '/extend_status/:id', to: 'statuses#extend_status', as: 'extend_status'
   post '/end_use_status/:id', to: 'statuses#end_use_status', as: 'end_use_status'
 
   namespace :admin do
-    resources :users
-    resources :items
+    resources :users do
+      collection do
+        get :reorder
+        patch :update_order
+      end
+    end
+    resources :items do
+      collection do
+        get :reorder
+        patch :update_order
+      end
+    end
   end
 end

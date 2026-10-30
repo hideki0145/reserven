@@ -16,6 +16,24 @@
   --bs-success-rgb: 40, 167, 69;
 }
 
+.order-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.order-handle {
+  cursor: grab;
+}
+
+.order-handle, [data-order-move] {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+[data-ordering-row].is-dragging {
+  opacity: .5;
+}
+
 .btn-primary {
   --bs-btn-bg: #007bff;
   --bs-btn-border-color: #007bff;
@@ -53,6 +71,18 @@
   overflow-wrap: anywhere;
 }
 
+.usage-reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 28rem;
+}
+
+.usage-reason-field {
+  white-space: normal;
+  width: 100%;
+  max-width: 28rem;
+}
+
 .status-refresh-notice {
   display: grid;
 }
@@ -62,6 +92,31 @@
 }
 
 @media (max-width: 767.98px) {
+  .history-table, .history-table > tbody, .history-table tr, .history-table td {
+    display: block;
+    width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .history-table tbody tr {
+    margin-bottom: 1rem;
+    padding: .75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+  }
+
+  .history-table td {
+    border: 0;
+  }
+
   .status-list {
     overflow-x: visible;
   }

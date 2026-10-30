@@ -16,7 +16,7 @@
     <thead class="table-light">
       <tr>
         <th scope="col"><%= Item.human_attribute_name(:name) %></th>
-        <th scope="col"><%= "#{Status.model_name.human}(10分毎に自動更新)" %></th>
+        <th scope="col"><%= "#{Usage.model_name.human}(10分毎に自動更新)" %></th>
         <th scope="col"><span class="visually-hidden">操作</span></th>
       </tr>
     </thead>
@@ -30,7 +30,7 @@
       <% @items.each do |item| %>
         <tr>
           <td class="fw-semibold"><%= item.name %></td>
-          <% status = item.status %>
+          <% usage = item.current_usage %>
           <% state = item.usage_state(current_user.id, now: usage_checked_at) %>
           <td>
             <% if state != :available %>
@@ -43,8 +43,9 @@
               <% else %>
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
               <% end %>
-              <div><span class="text-body-secondary">利用者:</span> <%= status.user.name %><%= '(自分)' if status.user_id == current_user.id %></div>
-              <div><span class="text-body-secondary">利用期限:</span> <%= l status.expires_at, format: '%m/%d(%a) %H:%M' %></div>
+              <div><span class="text-body-secondary">利用者:</span> <%= usage.user.name %><%= '(自分)' if usage.user_id == current_user.id %></div>
+              <div><span class="text-body-secondary">利用期限:</span> <%= l usage.ends_at, format: '%m/%d(%a) %H:%M' %></div>
+              <% if usage.reason.present? %><div class="usage-reason"><span class="text-body-secondary">利用理由:</span> <%= usage.reason %></div><% end %>
               <% if state == :grace_period %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
               <% elsif state == :expired %>
@@ -59,7 +60,7 @@
               <% if item.can_extend_usage?(current_user.id) %>
                 <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-start gap-2 mb-2' do |f| %>
                   <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
-                  <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, status.expires_at].max + 15.minutes %>
+                  <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, usage.ends_at].max + 15.minutes %>
                   <span class="pt-2">まで</span>
                   <%= f.submit '延長する', class: 'btn btn-success' %>
                 <% end %>
@@ -77,6 +78,13 @@
                 <%= render 'deadline_field', f: f, field_id: "update_status_#{item.id}_expires_at", deadline: Time.current + 15.minutes %>
                 <span class="pt-2">まで</span>
                 <%= f.submit '利用する', class: 'btn btn-primary' %>
+                <% unless item.reason_policy_none? %>
+                  <div class="usage-reason-field">
+                    <%= f.label :reason, "利用理由(#{item.reason_policy_required? ? '必須' : '任意'})", for: "usage_#{item.id}_reason", class: 'form-label small mb-1' %>
+                    <%= f.text_area :reason, id: "usage_#{item.id}_reason", value: @failed_item_id == item.id ? @reason_input : nil, rows: 2, maxlength: 500, required: item.reason_policy_required?, class: 'form-control', data: { usage_reason: true } %>
+                    <div class="form-text">500文字以内で入力してください。</div>
+                  </div>
+                <% end %>
               <% end %>
             </td>
           <% end %>

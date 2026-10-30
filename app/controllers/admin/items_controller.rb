@@ -1,8 +1,10 @@
 class Admin::ItemsController < ApplicationController
+  include AdminOrdering
+  helper_method :ordering_model, :ordering_index_path, :ordering_edit_path, :ordering_save_path
   before_action :require_admin
 
   def index
-    @items = Item.order(:id)
+    @items = Item.in_order
   end
 
   def show
@@ -49,7 +51,23 @@ class Admin::ItemsController < ApplicationController
   private
 
   def item_params
-    params.require(:item).permit(:name, :disabled)
+    params.require(:item).permit(:name, :disabled, :reason_policy)
+  end
+
+  def ordering_model
+    Item
+  end
+
+  def ordering_index_path
+    admin_items_path
+  end
+
+  def ordering_edit_path
+    reorder_admin_items_path
+  end
+
+  def ordering_save_path
+    update_order_admin_items_path
   end
 
   def require_admin

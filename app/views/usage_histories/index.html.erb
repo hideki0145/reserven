@@ -1,0 +1,48 @@
+<h1 class="h4">利用履歴</h1>
+<p class="small text-body-secondary">利用終了・切替の新しい順に表示します。記録は利用の確保を示し、実際の使用状況を保証するものではありません。</p>
+
+<%= form_with url: usage_histories_path, method: :get, class: 'row g-2 align-items-end mb-4' do |f| %>
+  <div class="col-md-4">
+    <%= f.label :target, '対象', class: 'form-label' %>
+    <%= f.select :target, options_for_select(@targets, @filters['target']), { include_blank: 'すべて' }, class: 'form-select' %>
+  </div>
+  <div class="col-md-4">
+    <%= f.label :member, '利用者', class: 'form-label' %>
+    <%= f.select :member, options_for_select(@members, @filters['member']), { include_blank: '全員' }, class: 'form-select' %>
+  </div>
+  <div class="col-md-4 d-flex gap-2">
+    <%= f.submit '絞り込む', class: 'btn btn-primary' %>
+    <%= link_to 'クリア', usage_histories_path, class: 'btn btn-outline-secondary' %>
+  </div>
+<% end %>
+
+<p class="small text-body-secondary"><%= @total %>件 / <%= @page %>ページ目</p>
+<table class="table table-hover align-middle history-table" aria-label="利用履歴">
+  <thead class="table-light"><tr><th scope="col">名前・利用者</th><th scope="col">利用期間</th><th scope="col">終了操作</th><th scope="col">操作情報</th></tr></thead>
+  <tbody>
+    <% if @usages.empty? %>
+      <tr><td colspan="4" class="text-body-secondary">該当する利用履歴はありません。</td></tr>
+    <% end %>
+    <% @usages.each do |usage| %>
+      <tr>
+        <td><strong><%= usage.item_name_snapshot %></strong><div><%= usage.user_name_snapshot %></div><% if usage.reason.present? %><div class="usage-reason small">利用理由: <%= usage.reason %></div><% end %></td>
+        <td><div><span class="text-body-secondary">開始: </span><%= l usage.starts_at, format: :timestamp %></div><div><span class="text-body-secondary">終了予定: </span><%= l usage.ends_at, format: :timestamp %></div></td>
+        <td><div><%= l usage.finished_at, format: :timestamp %></div><span class="badge text-bg-secondary"><%= usage.finish_reason == 'reassigned' ? '別の利用への切替' : '利用終了' %></span></td>
+        <td><details><summary>操作情報</summary>
+          <div>登録者: <%= usage.created_by_name_snapshot.presence || '不明' %></div>
+          <div>最終更新者: <%= usage.updated_by_name_snapshot.presence || '不明' %></div>
+          <div>終了・切替: <%= usage.finished_by_name_snapshot.presence || '不明' %></div>
+        </details></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<nav aria-label="履歴のページ" class="d-flex justify-content-between align-items-center">
+  <% if @page > 1 %>
+    <%= link_to '前へ', usage_histories_path(@filters.merge(page: @page - 1)), class: 'btn btn-outline-secondary' %>
+  <% else %><span class="btn btn-outline-secondary disabled" aria-disabled="true">前へ</span><% end %>
+  <span><%= @page %> / <%= @pages %></span>
+  <% if @page < @pages %>
+    <%= link_to '次へ', usage_histories_path(@filters.merge(page: @page + 1)), class: 'btn btn-outline-secondary' %>
+  <% else %><span class="btn btn-outline-secondary disabled" aria-disabled="true">次へ</span><% end %>
+</nav>

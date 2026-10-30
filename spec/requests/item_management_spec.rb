@@ -6,7 +6,7 @@ RSpec.describe 'Item availability management', type: :request do
   before { login(user) }
 
   def use_item(owner: user, expires_at: 30.minutes.from_now)
-    Status.create!(item: item, user: owner, use_flg: true, expires_at: expires_at)
+    create_usage(item: item, user: owner, active: true, expires_at: expires_at)
   end
 
   it 'hides unused disabled items but keeps them in the admin listing' do
@@ -34,12 +34,12 @@ RSpec.describe 'Item availability management', type: :request do
   end
 
   it 'rejects direct start and extension requests without changing usage or notifying Slack' do
-    expect { post update_status_path(item), params: { expires_at: 1.hour.from_now.iso8601 } }.not_to change(Status, :count)
+    expect { post update_status_path(item), params: { expires_at: 1.hour.from_now.iso8601 } }.not_to change(Usage, :count)
     expect(flash[:alert]).to include('利用停止中')
     status = use_item
-    original = status.expires_at
+    original = status.ends_at
     post extend_status_path(item), params: { expires_at: 1.hour.from_now.iso8601 }
-    expect(status.reload.expires_at).to eq(original)
+    expect(status.reload.ends_at).to eq(original)
     expect(flash[:alert]).to include('利用停止中')
     expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
   end
@@ -47,10 +47,10 @@ RSpec.describe 'Item availability management', type: :request do
   it 'allows only the owner to end disabled usage and then hides the item' do
     status = use_item(owner: create_user)
     post end_use_status_path(item)
-    expect(status.reload.use_flg).to be(true)
+    expect(status.reload.unfinished?).to be(true)
     login(status.user)
     post end_use_status_path(item)
-    expect(status.reload.use_flg).to be(false)
+    expect(status.reload.unfinished?).to be(false)
     get status_path
     expect(Nokogiri::HTML(response.body).at_css('tbody').text).not_to include(item.name)
   end
@@ -63,7 +63,7 @@ RSpec.describe 'Item availability management', type: :request do
       item.update!(disabled: true)
       expect do
         post update_status_path(item), params: { expires_at: '00:10', confirmed_expires_at: Time.zone.local(2026, 10, 29, 0, 10).iso8601 }
-      end.not_to change(Status, :count)
+      end.not_to change(Usage, :count)
       expect(flash[:alert]).to include('利用停止中')
     end
   end
@@ -72,8 +72,8 @@ RSpec.describe 'Item availability management', type: :request do
     status = use_item
     expect { delete admin_item_path(item) }.not_to change(Item, :count)
     expect(flash[:alert]).to include('利用中のアイテムは削除できません。')
-    expect(status.reload.use_flg).to be(true)
-    status.reset
+    expect(status.reload.unfinished?).to be(true)
+    status.finish!(status.user)
     expect { delete admin_item_path(item) }.to change(Item, :count).by(-1)
   end
 

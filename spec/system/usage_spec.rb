@@ -14,7 +14,8 @@ RSpec.describe 'Browser usage', type: :system do
     click_button '利用する'
     expect(page).to have_css('.badge.bg-primary-subtle.text-primary-emphasis', text: '🔵 利用中')
     expect(page).to have_content("#{user.name}(自分)")
-    expect(page.evaluate_script("getComputedStyle(document.querySelector('.btn-success')).backgroundColor")).to eq('rgb(40, 167, 69)')
+    page.driver.with_playwright_page { |browser_page| browser_page.mouse.move(0, 0) }
+    expect(page).to have_css('.btn-success', style: { 'background-color' => 'rgb(40, 167, 69)' })
     click_button '利用終了'
     expect(page).to have_css('.badge', text: '✅ 利用可能')
     dismiss_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
@@ -35,9 +36,9 @@ RSpec.describe 'Browser usage', type: :system do
       grace = Item.create!(name: '猶予期間中のPC')
       disabled = Item.create!(name: '利用中に無効化したPC', disabled: true)
       hidden = Item.create!(name: '無効で未利用のPC', disabled: true)
-      Status.create!(item: active, user: other_user, expires_at: 30.minutes.from_now, use_flg: true)
-      Status.create!(item: grace, user: other_user, expires_at: 5.minutes.ago, use_flg: true)
-      Status.create!(item: disabled, user: user, expires_at: 30.minutes.from_now, use_flg: true)
+      create_usage(item: active, user: other_user, expires_at: 30.minutes.from_now, active: true)
+      create_usage(item: grace, user: other_user, expires_at: 5.minutes.ago, active: true)
+      create_usage(item: disabled, user: user, expires_at: 30.minutes.from_now, active: true)
       page.current_window.resize_to(390, 844)
       login(user)
 
@@ -155,14 +156,14 @@ RSpec.describe 'Deadline entry', type: :system do
     expect(page).to have_css('[data-deadline-day]', exact_text: '翌日')
     click_button '利用する'
     expect(page).to have_content('翌日 10/29(木) 00:10')
-    expect(item.reload.status).to be_nil
+    expect(item.reload.current_usage).to be_nil
     expect(page).to have_css('dialog[open]')
     expect(page).to have_current_path(root_path)
     expect(find('dialog[open]')).not_to have_content('日本時間')
     expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
     find('dialog[open]').send_keys(:escape)
     expect(page).not_to have_css('dialog[open]')
-    expect(item.reload.status).to be_nil
+    expect(item.reload.current_usage).to be_nil
     click_button '利用する'
     click_button '戻る'
     expect(page).not_to have_css('dialog[open]')
@@ -173,7 +174,7 @@ RSpec.describe 'Deadline entry', type: :system do
     expect(find('input[name="expires_at"]').value).to eq('00:25')
     click_button '延長する'
     expect(page).to have_content('翌日 10/29(木) 00:25')
-    expect(item.reload.status.expires_at).to eq(Time.zone.local(2026, 10, 29, 0, 10))
+    expect(item.reload.current_usage.ends_at).to eq(Time.zone.local(2026, 10, 29, 0, 10))
     click_button '確定する'
     expect(page).to have_content('利用期限: 10/29(木) 00:25')
   end
@@ -184,7 +185,7 @@ RSpec.describe 'Deadline entry', type: :system do
     fill_in '利用期限', with: '20:00'
     click_button '利用する'
     expect(page).to have_content('利用期限: 10/28(水) 20:00')
-    expect(item.reload.status.expires_at).to eq(Time.zone.local(2026, 10, 28, 20))
+    expect(item.reload.current_usage.ends_at).to eq(Time.zone.local(2026, 10, 28, 20))
   end
 
   it 'rejects the current time without changing availability' do
