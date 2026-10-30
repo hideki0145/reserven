@@ -16,6 +16,24 @@
   --bs-success-rgb: 40, 167, 69;
 }
 
+.order-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.order-handle {
+  cursor: grab;
+}
+
+.order-handle, [data-order-move] {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+[data-ordering-row].is-dragging {
+  opacity: .5;
+}
+
 .btn-primary {
   --bs-btn-bg: #007bff;
   --bs-btn-border-color: #007bff;

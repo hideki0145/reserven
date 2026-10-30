@@ -123,3 +123,52 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// Submit only after reviewing the order; hidden inputs follow their rows in the DOM.
+document.addEventListener('DOMContentLoaded', () => {
+  const list = document.querySelector('[data-ordering-list]');
+  if (!list) return;
+  const notice = document.querySelector('[data-order-announcement]');
+  const update = (row) => {
+    const rows = Array.from(list.children);
+    rows.forEach((entry, index) => {
+      entry.querySelector('[data-order-move="up"]').disabled = index === 0;
+      entry.querySelector('[data-order-move="down"]').disabled = index === rows.length - 1;
+    });
+    if (row) notice.textContent = `${row.querySelector('.order-name').textContent.trim()}を${rows.indexOf(row) + 1}番目に移動しました。保存して反映してください。`;
+  };
+  list.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-order-move]');
+    if (!button) return;
+    const row = button.closest('[data-ordering-row]');
+    const neighbor = button.dataset.orderMove === 'up' ? row.previousElementSibling : row.nextElementSibling;
+    if (!neighbor) return;
+    if (button.dataset.orderMove === 'up') neighbor.before(row);
+    else neighbor.after(row);
+    update(row);
+  });
+  let dragged = null;
+  list.addEventListener('dragstart', (event) => {
+    if (!event.target.closest('.order-handle')) { event.preventDefault(); return; }
+    dragged = event.target.closest('[data-ordering-row]');
+    event.dataTransfer.setData('text/plain', dragged.dataset.recordId);
+    event.dataTransfer.effectAllowed = 'move';
+    dragged.classList.add('is-dragging');
+  });
+  list.addEventListener('dragover', (event) => {
+    if (!dragged) return;
+    event.preventDefault();
+    const target = event.target.closest('[data-ordering-row]');
+    if (!target || target === dragged) return;
+    const bounds = target.getBoundingClientRect();
+    if (event.clientY < bounds.top + bounds.height / 2) target.before(dragged);
+    else target.after(dragged);
+    update(dragged);
+  });
+  list.addEventListener('drop', (event) => { if (dragged) event.preventDefault(); });
+  list.addEventListener('dragend', () => {
+    dragged?.classList.remove('is-dragging');
+    dragged = null;
+  });
+  update();
+});

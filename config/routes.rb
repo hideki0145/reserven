@@ -24,7 +24,17 @@ Rails.application.routes.draw do
   post '/end_use_status/:id', to: 'statuses#end_use_status', as: 'end_use_status'
 
   namespace :admin do
-    resources :users
-    resources :items
+    resources :users do
+      collection do
+        get :reorder
+        patch :update_order
+      end
+    end
+    resources :items do
+      collection do
+        get :reorder
+        patch :update_order
+      end
+    end
   end
 end

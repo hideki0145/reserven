@@ -10,13 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000002) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "disabled", default: false, null: false
     t.string "reason_policy", default: "none", null: false
+    t.integer "seq", default: 0, null: false
+    t.index ["seq"], name: "index_items_on_seq"
   end
 
   create_table "usages", force: :cascade do |t|
@@ -54,7 +56,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000001) do
     t.datetime "updated_at", null: false
     t.string "remember_digest"
     t.boolean "disabled", default: false, null: false
+    t.integer "seq", default: 0, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["seq"], name: "index_users_on_seq"
   end
 
   add_foreign_key "usages", "items"

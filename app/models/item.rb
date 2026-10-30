@@ -1,4 +1,5 @@
 class Item < ApplicationRecord
+  include Sequenced
   has_many :usages, dependent: :nullify
   has_one :current_usage, -> { unfinished.order(id: :desc) }, class_name: 'Usage'
 

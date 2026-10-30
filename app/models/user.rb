@@ -1,4 +1,5 @@
 class User < ApplicationRecord
+  include Sequenced
   attr_accessor :remember_token
 
   has_secure_password

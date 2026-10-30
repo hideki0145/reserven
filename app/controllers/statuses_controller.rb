@@ -1,6 +1,6 @@
 class StatusesController < ApplicationController
   def home
-    @items = Item.visible_on_status.order(:id).includes(current_usage: :user)
+    @items = Item.visible_on_status.in_order.includes(current_usage: :user)
   end
 
   def deadline_preview

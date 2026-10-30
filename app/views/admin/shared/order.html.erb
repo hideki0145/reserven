@@ -1,0 +1,25 @@
+<h1 class="h4"><%= ordering_model.model_name.human %>の並び順変更</h1>
+<p>ハンドルをドラッグするか、上下ボタンで移動してください。保存するまで一覧には反映されません。</p>
+<noscript><p class="alert alert-warning">並び替えにはJavaScriptを有効にしてください。</p></noscript>
+<%= form_with url: ordering_save_path, method: :patch, data: { ordering_form: true } do |f| %>
+  <%= f.hidden_field :order_version, value: @order_version %>
+  <ol class="list-unstyled" data-ordering-list>
+    <% @records.each do |record| %>
+      <li class="border rounded p-2 mb-2 d-flex align-items-center gap-2" data-ordering-row data-record-id="<%= record.id %>">
+        <%= hidden_field_tag 'ids[]', record.id, id: nil %>
+        <button type="button" class="btn btn-outline-secondary order-handle" draggable="true" aria-label="<%= record.name %>をドラッグして移動" title="ドラッグして移動">☰</button>
+        <div class="flex-grow-1 order-name"><%= record.name %> <% if record.disabled? %><span class="badge text-bg-secondary">無効</span><% end %></div>
+        <div class="d-flex gap-1 flex-shrink-0">
+          <button type="button" class="btn btn-outline-secondary" data-order-move="up" aria-label="<%= record.name %>を上へ">↑</button>
+          <button type="button" class="btn btn-outline-secondary" data-order-move="down" aria-label="<%= record.name %>を下へ">↓</button>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+  <% if @records.empty? %><p>並び替えるデータがありません。</p><% end %>
+  <p class="small text-body-secondary" data-order-announcement role="status">並び替え後に「保存する」を押してください。</p>
+  <div class="d-flex gap-2">
+    <%= f.submit '保存する', class: 'btn btn-primary', disabled: @records.empty? %>
+    <%= link_to 'キャンセル', ordering_index_path, class: 'btn btn-outline-secondary' %>
+  </div>
+<% end %>

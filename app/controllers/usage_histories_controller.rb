@@ -11,8 +11,8 @@ class UsageHistoriesController < ApplicationController
     requested_page = params[:page].is_a?(String) ? Integer(params[:page], exception: false) : nil
     @page = [[requested_page || 1, 1].max, @pages].min
     @usages = history.order(finished_at: :desc, id: :desc).limit(25).offset((@page - 1) * 25)
-    @targets = Item.order(:id).map { |item| [item.name, "id:#{item.id}"] }
-    @members = [['自分', 'self']] + User.order(:id).map { |user| [user.name, "id:#{user.id}"] }
+    @targets = Item.in_order.map { |item| [item.name, "id:#{item.id}"] }
+    @members = [['自分', 'self']] + User.in_order.map { |user| [user.name, "id:#{user.id}"] }
     @targets += deleted_options(:item)
     @members += deleted_options(:user)
   end
