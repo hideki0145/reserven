@@ -61,7 +61,7 @@ class StatusesController < ApplicationController
 
       previous_expires_at = item.current_usage.ends_at
       usage = item.current_usage
-      usage.update!(ends_at: expires_at)
+      usage.extend!(expires_at, current_user)
     end
     SlackNotifier.deliver(SlackUsageNotification.build(event: :extend, item: item, user: current_user,
                                                      expires_at: usage.ends_at, previous_expires_at: previous_expires_at))

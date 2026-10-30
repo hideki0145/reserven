@@ -2,11 +2,14 @@ class Usage < ApplicationRecord
   belongs_to :item, optional: true
   belongs_to :user, optional: true
   belongs_to :finished_by, class_name: 'User', optional: true
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :updated_by, class_name: 'User', optional: true
 
   scope :unfinished, -> { where(finished_at: nil) }
 
   before_validation :capture_name_snapshots, on: :create
   validates :item, :user, presence: true, on: :create
+  validates :created_by, :updated_by, presence: true, on: :create
   validates :item_name_snapshot, :user_name_snapshot, :starts_at, :ends_at, presence: true
   validates :ends_at, comparison: { greater_than: :starts_at }, if: -> { starts_at && ends_at }
   validates :finish_reason, inclusion: { in: %w[returned reassigned] }, allow_nil: true
@@ -23,7 +26,12 @@ class Usage < ApplicationRecord
   def finish!(actor, reason: 'returned')
     # Preserve the operator's name at the finish operation.
     update!(finished_at: Time.current, finish_reason: reason,
-            finished_by: actor, finished_by_name_snapshot: actor.name)
+            finished_by: actor, finished_by_name_snapshot: actor.name,
+            updated_by: actor, updated_by_name_snapshot: actor.name)
+  end
+
+  def extend!(ends_at, actor)
+    update!(ends_at: ends_at, updated_by: actor, updated_by_name_snapshot: actor.name)
   end
 
   private
@@ -32,5 +40,9 @@ class Usage < ApplicationRecord
     # Preserve names at record creation, independently of later renames or deletion.
     self.item_name_snapshot ||= item&.name
     self.user_name_snapshot ||= user&.name
+    self.created_by ||= user
+    self.updated_by ||= created_by
+    self.created_by_name_snapshot ||= created_by&.name
+    self.updated_by_name_snapshot ||= updated_by&.name
   end
 end

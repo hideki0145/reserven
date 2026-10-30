@@ -7,6 +7,8 @@ class User < ApplicationRecord
 
   has_many :usages, dependent: :nullify
   has_many :finished_usages, class_name: 'Usage', foreign_key: :finished_by_id, dependent: :nullify
+  has_many :created_usages, class_name: 'Usage', foreign_key: :created_by_id, dependent: :nullify
+  has_many :updated_usages, class_name: 'Usage', foreign_key: :updated_by_id, dependent: :nullify
 
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true

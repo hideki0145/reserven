@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000000) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
@@ -31,9 +31,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_000001) do
     t.string "finished_by_name_snapshot"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "created_by_id"
+    t.string "created_by_name_snapshot"
+    t.integer "updated_by_id"
+    t.string "updated_by_name_snapshot"
+    t.index ["created_by_id"], name: "index_usages_on_created_by_id"
     t.index ["finished_by_id"], name: "index_usages_on_finished_by_id"
     t.index ["item_id", "finished_at"], name: "index_usages_on_item_id_and_finished_at"
     t.index ["item_id"], name: "index_usages_on_item_id"
+    t.index ["updated_by_id"], name: "index_usages_on_updated_by_id"
     t.index ["user_id"], name: "index_usages_on_user_id"
   end
 
@@ -51,5 +57,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_000001) do
 
   add_foreign_key "usages", "items"
   add_foreign_key "usages", "users"
+  add_foreign_key "usages", "users", column: "created_by_id"
   add_foreign_key "usages", "users", column: "finished_by_id"
+  add_foreign_key "usages", "users", column: "updated_by_id"
 end
