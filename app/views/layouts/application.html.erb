@@ -38,6 +38,7 @@
         <ul id="app-navigation" class="app-navigation navbar-nav ms-auto flex-row flex-wrap gap-2 align-items-center">
           <% if current_user %>
             <li class="nav-item"><%= link_to '利用状況', status_path, class: 'nav-link' %></li>
+            <li class="nav-item"><%= link_to '利用履歴', usage_histories_path, class: 'nav-link' %></li>
             <% if current_user.admin? %>
               <li class="nav-item"><%= link_to 'ユーザ一覧', admin_users_path, class: 'nav-link' %></li>
               <li class="nav-item"><%= link_to 'アイテム一覧', admin_items_path, class: 'nav-link' %></li>

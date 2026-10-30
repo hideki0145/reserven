@@ -62,6 +62,31 @@
 }
 
 @media (max-width: 767.98px) {
+  .history-table, .history-table > tbody, .history-table tr, .history-table td {
+    display: block;
+    width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .history-table tbody tr {
+    margin-bottom: 1rem;
+    padding: .75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+  }
+
+  .history-table td {
+    border: 0;
+  }
+
   .status-list {
     overflow-x: visible;
   }
