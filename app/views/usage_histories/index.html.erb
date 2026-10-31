@@ -26,8 +26,8 @@
     <% @usages.each do |usage| %>
       <tr>
         <td><strong><%= usage.item_name_snapshot %></strong><div><%= usage.user_name_snapshot %></div><% if usage.reason.present? %><div class="usage-reason small">利用理由: <%= usage.reason %></div><% end %></td>
-        <td><div><span class="text-body-secondary">開始: </span><%= l usage.starts_at, format: :timestamp %></div><div><span class="text-body-secondary">終了予定: </span><%= l usage.ends_at, format: :timestamp %></div></td>
-        <td><div><%= l usage.history_time, format: :timestamp %></div><span class="badge text-bg-secondary"><%= usage.completion_label %></span></td>
+        <td><%= usage_period usage.starts_at, usage.ends_at %></td>
+        <td><div><%= l usage.history_time, format: :usage_datetime %></div><span class="badge text-bg-secondary"><%= usage.completion_label %></span></td>
         <td><details><summary>操作情報</summary>
           <div>登録者: <%= usage.created_by_name_snapshot.presence || '不明' %></div>
           <div>最終更新者: <%= usage.updated_by_name_snapshot.presence || '不明' %></div>

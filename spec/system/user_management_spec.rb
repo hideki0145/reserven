@@ -5,7 +5,7 @@ RSpec.describe 'User management screen', type: :system do
     admin = create_user(admin: true, created_at: Time.zone.local(2026, 10, 28, 19, 30, 15))
     login(admin)
     click_link 'ユーザ一覧'
-    expect(page).to have_content('2026/10/28 19:30:15')
+    expect(page).to have_content('2026/10/28 19:30')
     expect(page.evaluate_script("getComputedStyle(document.querySelector('tbody td.text-center')).textAlign")).to eq('center')
     find("a[href='#{admin_user_path(admin)}']").click
     expect(page).to have_link('一覧', class: 'btn')

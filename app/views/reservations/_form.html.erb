@@ -1,0 +1,65 @@
+<% if @error %><div class="alert alert-danger" role="alert"><%= @error %></div><% end %>
+<%= form_with url: @usage ? reservation_path(@usage) : reservations_path, method: @usage ? :patch : :post, scope: :reservation, data: { reservation_form: true } do |f| %>
+  <%= hidden_field_tag :return_to, 'status' if params[:return_to] == 'status' %>
+  <% if @usage %>
+    <p><strong><%= @usage.item_name_snapshot %></strong> / 利用者: <%= @usage.user_name_snapshot %></p>
+    <p class="small text-body-secondary">登録者: <%= @usage.created_by_name_snapshot.presence || '不明' %></p>
+  <% else %>
+    <fieldset class="mb-3">
+      <legend class="fs-6">名前(複数選択可)</legend>
+      <% @targets.each do |item| %>
+        <div class="form-check mb-2">
+          <%= check_box_tag 'reservation[item_ids][]', item.id, @selected_ids.include?(item.id.to_s), id: "reservation_item_#{item.id}", class: 'form-check-input', data: { reason_policy: item.reason_policy } %>
+          <%= label_tag "reservation_item_#{item.id}", item.name, class: 'form-check-label' %>
+          <span class="small text-body-secondary">利用理由: <%= { 'none' => '入力しない', 'optional' => '任意', 'required' => '必須' }.fetch(item.reason_policy) %></span>
+        </div>
+      <% end %>
+      <% if @targets.empty? %><p class="text-body-secondary">予約できる対象がありません。管理者に利用方式の設定をご確認ください。</p><% end %>
+    </fieldset>
+    <div class="mb-3">
+      <% if current_user.usage_manager? %>
+        <%= f.label :user_id, '利用者', class: 'form-label' %>
+        <%= f.select :user_id, options_from_collection_for_select(@members, :id, :name, @input['user_id'].presence || current_user.id), { include_blank: '選択してください' }, required: true, class: 'form-select' %>
+        <div class="form-text">有効なメンバーの予約を代理登録できます。</div>
+      <% else %><p>利用者: <%= current_user.name %></p><% end %>
+    </div>
+    <fieldset class="mb-3">
+      <legend class="fs-6">利用開始</legend>
+      <div class="form-check form-check-inline"><%= f.radio_button :timing, 'future', checked: @input['timing'] != 'now', class: 'form-check-input' %><%= f.label :timing_future, '日時を指定する', class: 'form-check-label' %></div>
+      <div class="form-check form-check-inline"><%= f.radio_button :timing, 'now', checked: @input['timing'] == 'now', class: 'form-check-input' %><%= f.label :timing_now, '今すぐ利用する', class: 'form-check-label' %></div>
+    </fieldset>
+  <% end %>
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <%= f.label :starts_at, '開始日時', class: 'form-label' %>
+      <% if @active %>
+        <div class="form-control bg-body-tertiary"><%= l @usage.starts_at, format: :usage_datetime %></div>
+        <%= f.hidden_field :starts_at, value: @usage.starts_at.iso8601(6) %>
+      <% else %>
+        <%= f.datetime_local_field :starts_at, value: @input['starts_at'], required: true, class: 'form-control', data: { reservation_start: true } %>
+      <% end %>
+      <div class="form-text" data-reservation-now-note <%= 'hidden' if @usage || @input['timing'] != 'now' %>>今すぐ利用する場合は、登録時点の時刻が開始日時になります。</div>
+    </div>
+    <div class="col-md-6">
+      <%= f.label :ends_at, '終了日時', class: 'form-label' %>
+      <%= f.datetime_local_field :ends_at, value: @input['ends_at'], required: true, class: 'form-control' %>
+    </div>
+  </div>
+  <% if @usage %>
+    <% unless @reason_policy == 'none' %>
+      <div class="mb-3"><%= f.label :reason, "利用理由(#{@reason_policy == 'required' ? '必須' : '任意'})", class: 'form-label' %>
+      <%= f.text_area :reason, value: @input['reason'], rows: 3, maxlength: 500, required: @reason_policy == 'required', class: 'form-control' %></div>
+    <% end %>
+  <% else %>
+    <div class="mb-3" data-reservation-reason-wrapper>
+      <%= f.label :reason, '利用理由', class: 'form-label' %>
+      <%= f.text_area :reason, value: @input['reason'], rows: 3, maxlength: 500, class: 'form-control', data: { reservation_reason: true } %>
+      <div class="form-text">500文字以内。必須の対象があれば入力してください。入力しない対象には保存しません。</div>
+    </div>
+    <p class="small text-body-secondary">選択したすべての対象を確保できる場合だけ登録します。重複する予約がある場合は、日時を変更してください。</p>
+  <% end %>
+  <div class="d-flex gap-2">
+    <%= f.submit @usage ? '更新する' : '予約を登録する', class: 'btn btn-primary', disabled: !@usage && @targets.empty? %>
+    <%= link_to '戻る', reservation_return_path, class: 'btn btn-outline-secondary' %>
+  </div>
+<% end %>

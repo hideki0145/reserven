@@ -36,9 +36,9 @@ RSpec.describe 'Administration', type: :request do
       expect(response.body).to include('会議室2', 'data-confirm')
       expect { delete admin_item_path(item) }.to change(Item, :count).by(-1)
       get admin_items_path
-      expect(response.body).to include('アイテムが登録されていません。')
+      expect(response.body).to include('利用設定が登録されていません。')
       get status_path
-      expect(response.body).to include('現在、表示できるアイテムはありません。')
+      expect(response.body).to include('現在、表示する情報はありません。')
     end
 
     it 'renders item validation errors for creation and update' do

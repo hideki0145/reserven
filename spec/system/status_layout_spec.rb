@@ -22,7 +22,7 @@ RSpec.describe 'Status header and controls', type: :system do
         click_button '利用する'
         expect(page).to have_button('延長する')
         expect(page.evaluate_script(aligned)).to be(true)
-        expect(page).to have_content('最終更新: 2026/10/29 12:00:00')
+        expect(page).to have_content('最終更新: 2026/10/29 12:00')
       end
     end
   end

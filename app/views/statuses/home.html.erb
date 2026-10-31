@@ -1,4 +1,4 @@
-<div class="status-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pb-3 mb-3 border-bottom">
+<div class="status-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pb-3 mb-3 border-bottom" data-auto-refresh>
   <p class="status-greeting mb-0">こんにちは、 <strong><%= current_user.name %></strong> さん</p>
   <div class="text-md-end">
     <div class="d-flex flex-wrap align-items-center justify-content-md-end gap-2">
@@ -11,8 +11,10 @@
     </div>
   </div>
 </div>
+<% if @items.any? || @reservation_items.empty? %>
+<% if @reservation_items.any? %><h2 class="h5">すぐに利用</h2><% end %>
 <div class="status-list table-responsive position-relative">
-  <table class="status-table table table-hover text-nowrap align-middle" role="table" aria-label="アイテムの利用状況" data-auto-refresh>
+  <table class="status-table table table-hover text-nowrap align-middle" role="table" aria-label="利用状況" data-auto-refresh>
     <thead class="table-light">
       <tr>
         <th scope="col"><%= Item.human_attribute_name(:name) %></th>
@@ -22,16 +24,16 @@
     </thead>
     <% usage_checked_at = Time.current %>
     <tbody>
-      <% if @items.empty? %>
+      <% if @items.empty? && @reservation_items.empty? %>
         <tr>
-          <td colspan="3" class="text-body-secondary">現在、表示できるアイテムはありません。</td>
+          <td colspan="3" class="text-body-secondary">現在、表示する情報はありません。</td>
         </tr>
       <% end %>
       <% @items.each do |item| %>
         <tr>
           <td class="fw-semibold"><%= item.name %></td>
           <% usage = item.current_usage %>
-          <% state = item.usage_state(current_user.id, now: usage_checked_at) %>
+          <% state = item.usage_state(current_user.usage_manager? && usage ? usage.user_id : current_user.id, now: usage_checked_at) %>
           <td>
             <% if state != :available %>
               <% if state == :stopped %>
@@ -44,7 +46,7 @@
                 <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fs-6 mb-2">🔵 利用中</span>
               <% end %>
               <div><span class="text-body-secondary">利用者:</span> <%= usage.user.name %><%= '(自分)' if usage.user_id == current_user.id %></div>
-              <div><span class="text-body-secondary">利用期限:</span> <%= l usage.ends_at, format: '%m/%d(%a) %H:%M' %></div>
+              <div><span class="text-body-secondary">利用期限:</span> <%= l usage.ends_at, format: :usage_deadline %></div>
               <% if usage.reason.present? %><div class="usage-reason"><span class="text-body-secondary">利用理由:</span> <%= usage.reason %></div><% end %>
               <% if state == :grace_period %>
                 <div class="small text-body-secondary mt-1">期限後15分の猶予期間中です。</div>
@@ -55,10 +57,11 @@
               <span class="badge rounded-pill text-bg-light border fs-6">✅ 利用可能</span>
             <% end %>
           </td>
-          <% if item.can_end_usage?(current_user.id) %>
+          <% if item.can_end_usage?(current_user.id, manager: current_user.usage_manager?) %>
             <td>
-              <% if item.can_extend_usage?(current_user.id) %>
+              <% if item.can_extend_usage?(current_user.id, manager: current_user.usage_manager?) %>
                 <%= form_with url: extend_status_path(id: item.id), local: true, class: 'd-flex flex-wrap align-items-start gap-2 mb-2' do |f| %>
+                  <%= f.hidden_field :usage_id, value: usage.id, id: nil %>
                   <%= f.label :expires_at, '延長後の利用期限', for: "extend_status_#{item.id}_expires_at", class: 'visually-hidden' %>
                   <%= render 'deadline_field', f: f, field_id: "extend_status_#{item.id}_expires_at", deadline: [Time.current, usage.ends_at].max + 15.minutes %>
                   <span class="pt-2">まで</span>
@@ -66,6 +69,7 @@
                 <% end %>
               <% end %>
               <%= form_with url: end_use_status_path(id: item.id), local: true do |f| %>
+                <%= f.hidden_field :usage_id, value: usage.id, id: nil %>
                 <%= f.submit '利用終了', class: 'btn btn-primary' %>
               <% end %>
             </td>
@@ -93,12 +97,45 @@
     </tbody>
   </table>
 </div>
+<% end %>
 
-<dialog id="deadline-confirmation" aria-labelledby="deadline-confirmation-title" class="border rounded p-4 shadow" data-preview-url="<%= deadline_preview_path %>">
-  <h2 id="deadline-confirmation-title" class="h4">日付をまたぐ利用の確認</h2>
-  <p data-confirmation-message class="alert alert-warning my-3"></p>
-  <form method="dialog" class="d-flex justify-content-end gap-2">
-    <button value="cancel" class="btn btn-outline-secondary" autofocus>戻る</button>
-    <button value="confirm" class="btn btn-primary">確定する</button>
-  </form>
-</dialog>
+<% if @reservation_items.any? %>
+  <h2 class="h5 mt-4">予約して利用</h2>
+  <div class="row g-3 mb-3">
+    <% @reservation_items.each do |item| %>
+      <% rows = @reservation_rows.fetch(item.id, []) %>
+      <% current = rows.find { |row| row.starts_at <= @reservation_checked_at } %>
+      <% following = rows.find { |row| row.starts_at > @reservation_checked_at } %>
+      <div class="col-12 col-lg-6"><section class="reservation-panel border rounded p-3 h-100">
+        <h3 class="h6"><%= item.name %></h3>
+        <span class="badge <%= item.disabled? ? 'text-bg-secondary' : current ? 'text-bg-primary' : 'text-bg-light border' %>"><%= item.disabled? ? '利用停止中' : current ? '予約時間内' : '現在は空き' %></span>
+        <% if current %>
+          <p class="mb-1 mt-2">利用者: <%= current.user_name_snapshot %></p>
+          <p class="small">期間: <%= l current.starts_at, format: :usage_datetime %> ～ <%= l current.ends_at, format: :usage_datetime %></p>
+          <% if current.reason.present? %><p class="usage-reason small">利用理由: <%= current.reason %></p><% end %>
+        <% end %>
+        <div class="small mt-2 mb-3">
+          <% if following %>
+            <div>次の予約: <%= l following.starts_at, format: :usage_datetime %> ～ <%= l following.ends_at, format: :usage_datetime %></div>
+            <div>利用者: <%= following.user_name_snapshot %><%= '(自分)' if following.user_id == current_user.id %></div>
+          <% else %><div>次の予約: なし</div><% end %>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <% if current && (current.user_id == current_user.id || current_user.usage_manager?) %>
+            <% if !item.disabled? && current.user && !current.user.disabled? %>
+              <%= link_to '期間・理由の変更', edit_reservation_path(current, return_to: 'status'), class: 'btn btn-outline-secondary' %>
+            <% end %>
+            <%= button_to '利用終了', finish_reservation_path(current), method: :patch, params: { return_to: 'status' }, class: 'btn btn-primary' %>
+          <% end %>
+          <% unless item.disabled? %>
+            <% unless current %><%= link_to '今すぐ利用', new_reservation_path(timing: 'now', item_ids: [item.id]), class: 'btn btn-outline-primary' %><% end %>
+            <%= link_to '期間を指定して予約', new_reservation_path(item_ids: [item.id]), class: 'btn btn-primary' %>
+          <% end %>
+          <%= link_to '予約一覧', reservations_path(target: item.id), class: 'btn btn-outline-secondary' %>
+        </div>
+      </section></div>
+    <% end %>
+  </div>
+<% end %>
+
+<%= render 'shared/confirmation_dialog', dialog_id: 'deadline-confirmation', heading: '日付をまたぐ利用の確認', preview_url: deadline_preview_path %>

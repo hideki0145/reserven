@@ -40,6 +40,13 @@ class Usage < ApplicationRecord
     finished_at.nil? && cancelled_at.nil?
   end
 
+  def self.next_reservations(item_ids, now: Time.current)
+    candidates = reservations.outstanding(now).where(item_id: item_ids).where('starts_at > ?', now)
+    first_starts = candidates.group(:item_id).select(:item_id, 'MIN(starts_at) AS next_start')
+    candidates.joins("INNER JOIN (#{first_starts.to_sql}) next_periods ON next_periods.item_id = usages.item_id AND next_periods.next_start = usages.starts_at")
+              .select('usages.*')
+  end
+
   def grace_period?(now: Time.current)
     usage_kind_immediate? && unfinished? && ends_at <= now && now < ends_at.since(15.minutes)
   end

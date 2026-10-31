@@ -84,7 +84,7 @@ RSpec.describe User, type: :model do
                                  active: true, expires_at: minutes.minutes.from_now)
 
       expect(user.destroy).to be(false)
-      expect(user.errors[:base]).to include('利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
+      expect(user.errors[:base]).to include('利用終了していない対象があるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
       expect(User.exists?(user.id)).to be(true)
       expect(ended.reload.unfinished?).to be(false)
       expect(outstanding.reload.unfinished?).to be(true)

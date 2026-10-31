@@ -12,13 +12,13 @@ RSpec.describe 'Item availability management', type: :request do
   it 'hides unused disabled items but keeps them in the admin listing' do
     get status_path
     expect(response.body).not_to include(item.name)
-    expect(response.body).to include('現在、表示できるアイテムはありません。')
+    expect(response.body).to include('現在、表示する情報はありません。')
     get admin_items_path
     expect(response.body).to include(item.name, '無効')
     item.update!(disabled: false)
     get status_path
     expect(response.body).to include(item.name, '利用する')
-    expect(response.body).not_to include('現在、表示できるアイテムはありません。')
+    expect(response.body).not_to include('現在、表示する情報はありません。')
   end
 
   it 'preserves outstanding usage even after expiry, for both owner and other users' do
@@ -71,7 +71,7 @@ RSpec.describe 'Item availability management', type: :request do
   it 'rejects deletion of outstanding usage but permits deletion after it ends' do
     status = use_item
     expect { delete admin_item_path(item) }.not_to change(Item, :count)
-    expect(flash[:alert]).to include('利用中のアイテムは削除できません。')
+    expect(flash[:alert]).to include('利用中の対象は削除できません。')
     expect(status.reload.unfinished?).to be(true)
     status.finish!(status.user)
     expect { delete admin_item_path(item) }.to change(Item, :count).by(-1)
@@ -82,7 +82,8 @@ RSpec.describe 'Item availability management', type: :request do
     patch admin_item_path(item), params: { item: { disabled: '0' } }
     expect(item.reload).not_to be_disabled
     get admin_items_path
-    expect(response.body).to include('2026/10/28 19:30:15')
+    expect(response.body).to include('2026/10/28 19:30')
+    expect(Nokogiri::HTML(response.body).text).not_to include('19:30:15')
     get admin_item_path(item)
     expect(Nokogiri::HTML(response.body).at_css('a.btn.btn-outline-secondary')['href']).to eq(admin_items_path)
   end

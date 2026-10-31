@@ -26,6 +26,7 @@
         <th>アカウント</th>
         <td><%= @user.disabled? ? '無効' : '有効' %></td>
       </tr>
+      <tr><th>利用管理者</th><td><%= @user.usage_manager? ? '○' : '×' %></td></tr>
       <tr>
         <th><%= User.human_attribute_name(:created_at) %></th>
         <td><%= l @user.created_at, format: :timestamp %></td>

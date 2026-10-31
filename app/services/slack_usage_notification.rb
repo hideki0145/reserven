@@ -1,5 +1,5 @@
 class SlackUsageNotification
-  def self.build(event:, item:, user:, expires_at: nil, previous_expires_at: nil, reason: nil)
+  def self.build(event:, item:, user:, expires_at: nil, previous_expires_at: nil, reason: nil, actor: nil)
     case event
     when :start
       title = "🔵 #{item.name} の利用を開始"
@@ -22,6 +22,10 @@ class SlackUsageNotification
     end
 
     lines = ["*利用者*: #{escape(user.name)}"]
+    if actor && actor.id != user.id
+      lines << "*操作者*: #{escape(actor.name)}"
+      text += " 操作者: #{escape(actor.name)}"
+    end
     if event == :extend
       lines << "*変更前*: #{deadline(previous_expires_at)}"
       lines << "*利用期限*: #{deadline(expires_at)}"
@@ -44,7 +48,7 @@ class SlackUsageNotification
   end
 
   def self.deadline(time, time_only: false)
-    I18n.l(time.in_time_zone, format: time_only ? '%H:%M' : '%m/%d(%a) %H:%M')
+    I18n.l(time.in_time_zone, format: time_only ? '%H:%M' : :usage_deadline)
   end
 
   def self.escape(text)

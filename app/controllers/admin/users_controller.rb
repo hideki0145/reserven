@@ -57,7 +57,7 @@ class Admin::UsersController < ApplicationController
   private
 
   def user_params
-    params.require(:user).permit(:name, :email, :admin, :disabled, :password, :password_confirmation)
+    params.require(:user).permit(:name, :email, :admin, :usage_manager, :disabled, :password, :password_confirmation)
   end
 
   def ordering_model

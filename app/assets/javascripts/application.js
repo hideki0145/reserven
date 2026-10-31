@@ -1,6 +1,31 @@
-document.addEventListener('submit', (event) => {
-  const message = event.target.dataset.confirm;
-  if (message && !window.confirm(message)) event.preventDefault();
+const showConfirmation = (dialog, message) => {
+  if (!dialog || document.querySelector('dialog[open]')) return Promise.resolve(false);
+  dialog.querySelector('[data-confirmation-message]').textContent = message;
+  dialog.returnValue = 'cancel';
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
+  });
+};
+
+const confirmationSubmissions = new WeakSet();
+const approvedConfirmationForms = new WeakSet();
+document.addEventListener('submit', async (event) => {
+  const form = event.target;
+  const message = form.dataset.confirm;
+  if (!message || approvedConfirmationForms.delete(form)) return;
+  event.preventDefault();
+  if (confirmationSubmissions.has(form)) return;
+  confirmationSubmissions.add(form);
+  const submitter = event.submitter;
+  try {
+    if (await showConfirmation(document.querySelector('#action-confirmation'), message)) {
+      approvedConfirmationForms.add(form);
+      form.requestSubmit(submitter);
+    }
+  } finally {
+    confirmationSubmissions.delete(form);
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,9 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasChanges() && !busy && !document.querySelector('dialog[open]')) window.location.reload();
   }, 600000);
 
-  document.querySelector('[data-refresh-status]').addEventListener('click', (event) => {
+  document.querySelector('[data-refresh-status]').addEventListener('click', async (event) => {
     event.preventDefault();
-    if (!hasChanges() || window.confirm('入力中の時刻を破棄して、利用状況を更新します。よろしいですか？')) {
+    if (!hasChanges() || await showConfirmation(document.querySelector('#action-confirmation'), '入力中の時刻を破棄して、利用状況を更新します。よろしいですか？')) {
       window.location.reload();
     }
   });
@@ -80,11 +105,8 @@ document.addEventListener('submit', async (event) => {
     if (field.value !== value) return;
     if (!preview.confirmation_required) { submit(); return; }
     const item = form.closest('tr').querySelector('.fw-semibold').textContent;
-    dialog.querySelector('[data-confirmation-message]').textContent = `${item}の利用期限は、${preview.label}です。この日時まで利用します。よろしいですか？`;
-    dialog.returnValue = 'cancel';
-    const confirmed = new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true }));
-    dialog.showModal();
-    if (await confirmed) {
+    const message = `${item}の利用期限は、${preview.label}です。この日時まで利用します。よろしいですか？`;
+    if (await showConfirmation(dialog, message)) {
       let confirmation = form.querySelector('input[name="confirmed_expires_at"]');
       if (!confirmation) {
         confirmation = document.createElement('input');
@@ -170,5 +192,29 @@ document.addEventListener('DOMContentLoaded', () => {
     dragged?.classList.remove('is-dragging');
     dragged = null;
   });
+  update();
+});
+
+// Keep ordinary form submission available; the server always rechecks these policies.
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('[data-reservation-form]');
+  if (!form) return;
+  const update = () => {
+    const start = form.querySelector('[data-reservation-start]');
+    const timing = form.querySelector('input[name="reservation[timing]"]:checked');
+    const now = timing?.value === 'now';
+    if (start && timing) { start.readOnly = now; start.required = !now; }
+    const note = form.querySelector('[data-reservation-now-note]');
+    if (note) note.hidden = !now;
+    const reason = form.querySelector('[data-reservation-reason]');
+    if (reason) {
+      const selected = Array.from(form.querySelectorAll('input[data-reason-policy]:checked'));
+      const enabled = selected.some(input => input.dataset.reasonPolicy !== 'none');
+      form.querySelector('[data-reservation-reason-wrapper]').hidden = !enabled;
+      reason.disabled = !enabled;
+      reason.required = selected.some(input => input.dataset.reasonPolicy === 'required');
+    }
+  };
+  form.addEventListener('change', update);
   update();
 });

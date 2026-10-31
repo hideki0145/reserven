@@ -1,0 +1,46 @@
+<h1 class="h4">予約一覧</h1>
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <%= link_to '予約する', new_reservation_path, class: 'btn btn-primary' %>
+  <%= link_to '終了・取消済みの履歴', usage_histories_path, class: 'btn btn-outline-secondary' %>
+  <%= link_to '更新', reservations_path(@filters.merge(page: @page)), class: 'btn btn-outline-secondary' %>
+</div>
+<p class="small text-body-secondary">最終更新: <%= l @checked_at, format: :timestamp %></p>
+<%= form_with url: reservations_path, method: :get, class: 'row g-2 mb-3 align-items-end' do |f| %>
+  <div class="col-md-4"><%= f.label :target, '対象', class: 'form-label' %><%= f.select :target, options_from_collection_for_select(@targets, :id, :name, @filters['target']), { include_blank: 'すべて' }, class: 'form-select' %></div>
+  <div class="col-md-4"><%= f.label :member, '利用者', class: 'form-label' %><%= f.select :member, options_for_select([['自分', 'self']] + @members.map { |user| [user.name, user.id.to_s] }, @filters['member']), { include_blank: '全員' }, class: 'form-select' %></div>
+  <div class="col-md-4 d-flex gap-2"><%= f.submit '絞り込む', class: 'btn btn-primary' %><%= link_to 'クリア', reservations_path, class: 'btn btn-outline-secondary' %></div>
+<% end %>
+<table class="table table-hover align-middle history-table" aria-label="予約一覧">
+  <thead class="table-light"><tr><th scope="col">名前・利用者</th><th scope="col">利用期間</th><th scope="col">状態</th><th scope="col">操作</th></tr></thead>
+  <tbody>
+    <% if @usages.empty? %><tr><td colspan="4">表示する予約がありません。</td></tr><% end %>
+    <% @usages.each do |usage| %>
+      <% state = usage.reservation_state(now: @checked_at) %>
+      <tr>
+        <td><strong><%= usage.item_name_snapshot %></strong><div><%= usage.user_name_snapshot %><%= '(自分)' if usage.user_id == current_user.id %></div><% if usage.item&.disabled? %><span class="badge text-bg-secondary">利用停止中</span><% end %><% if usage.user&.disabled? %><span class="badge text-bg-secondary">利用者無効</span><% end %><% if usage.reason.present? %><div class="usage-reason small">利用理由: <%= usage.reason %></div><% end %></td>
+        <td><%= usage_period usage.starts_at, usage.ends_at %></td>
+        <td><span class="badge <%= state == :active ? 'text-bg-primary' : 'text-bg-light border' %>"><%= state == :active ? '予約時間内' : '予約予定' %></span></td>
+        <td>
+          <% if usage.user_id == current_user.id || current_user.usage_manager? %>
+            <div class="d-flex flex-wrap gap-2">
+              <% if usage.item && !usage.item.disabled? && usage.user && !usage.user.disabled? %>
+                <%= link_to state == :active ? '期間・理由の変更' : '日時・理由の変更', edit_reservation_path(usage), class: 'btn btn-outline-secondary btn-sm' %>
+              <% end %>
+              <% if state == :scheduled %>
+                <%= button_to '取消', cancel_reservation_path(usage), method: :patch, class: 'btn btn-outline-danger btn-sm', form: { data: { confirm: "#{usage.item_name_snapshot}の予約を取り消します。よろしいですか？" } } %>
+              <% else %>
+                <%= button_to '利用終了', finish_reservation_path(usage), method: :patch, class: 'btn btn-primary btn-sm' %>
+              <% end %>
+            </div>
+          <% end %>
+          <details class="small mt-2"><summary>操作情報</summary><div>登録者: <%= usage.created_by_name_snapshot.presence || '不明' %></div><div>最終更新者: <%= usage.updated_by_name_snapshot.presence || '不明' %></div></details>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<nav aria-label="予約のページ" class="d-flex justify-content-between align-items-center">
+  <% if @page > 1 %><%= link_to '前へ', reservations_path(@filters.merge(page: @page - 1)), class: 'btn btn-outline-secondary' %><% else %><span></span><% end %>
+  <span><%= @page %> / <%= @pages %></span>
+  <% if @page < @pages %><%= link_to '次へ', reservations_path(@filters.merge(page: @page + 1)), class: 'btn btn-outline-secondary' %><% else %><span></span><% end %>
+</nav>

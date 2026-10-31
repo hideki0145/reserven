@@ -122,7 +122,7 @@ class ReservationBooking
     conflict = overlap.order(:starts_at, :id).first
     return unless conflict
 
-    period = "#{I18n.l(conflict.starts_at, format: :timestamp)} ～ #{I18n.l(conflict.ends_at, format: :timestamp)}"
+    period = "#{I18n.l(conflict.starts_at, format: :usage_datetime)} ～ #{I18n.l(conflict.ends_at, format: :usage_datetime)}"
     raise Invalid, "#{item.name}は#{period}の予約と重複します。既存予約を変更するか、別の期間を指定してください。"
   end
 

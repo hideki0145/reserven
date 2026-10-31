@@ -39,7 +39,7 @@ RSpec.describe 'Status refresh', type: :system do
 
   it 'refreshes an untouched page after ten minutes and displays its update time' do
     prepare_page
-    expect(page).to have_content('最終更新: 2026/10/28 19:30:00')
+    expect(page).to have_content('最終更新: 2026/10/28 19:30')
     @item.update!(name: '更新後のPC')
     advance_refresh_interval
     expect(page).to have_content('更新後のPC')
@@ -71,10 +71,10 @@ RSpec.describe 'Status refresh', type: :system do
     prepare_page
     fill_in '利用期限', with: '20:00'
     @item.update!(name: '更新後のPC')
-    dismiss_confirm { click_link '更新', exact: true }
+    dismiss_action_confirmation { click_link '更新', exact: true }
     expect(find('input[type="time"]').value).to eq('20:00')
     expect(page).to have_content('更新前のPC')
-    accept_confirm { click_link '更新', exact: true }
+    accept_action_confirmation { click_link '更新', exact: true }
     expect(page).to have_content('更新後のPC')
     expect(find('input[type="time"]').value).to eq('19:45')
   end
@@ -101,4 +101,19 @@ RSpec.describe 'Status refresh', type: :system do
     advance_refresh_interval
     expect(page).to have_content('更新後のPC')
   end
+
+  it 'pauses automatic refresh during a logout confirmation and resumes after Escape' do
+    prepare_page
+    click_button 'ログアウト'
+    expect(page).to have_css('#action-confirmation[open]')
+    @item.update!(name: '更新後のPC')
+    advance_refresh_interval
+    expect(page).to have_css('#action-confirmation[open]')
+    expect(page).to have_content('更新前のPC')
+    find('#action-confirmation[open]').send_keys(:escape)
+    expect(page).not_to have_css('#action-confirmation[open]')
+    advance_refresh_interval
+    expect(page).to have_content('更新後のPC')
+  end
+
 end

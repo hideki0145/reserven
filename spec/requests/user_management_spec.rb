@@ -50,7 +50,8 @@ RSpec.describe 'User account management', type: :request do
     admin.update!(created_at: Time.zone.local(2026, 10, 28, 19, 30, 15))
     get admin_users_path
     html = Nokogiri::HTML(response.body)
-    expect(html.text).to include('2026/10/28 19:30:15')
+    expect(html.text).to include('2026/10/28 19:30')
+    expect(html.text).not_to include('19:30:15')
     row = html.at_css("a[href='#{admin_user_path(admin)}']").ancestors('tr').first
     expect(row.at_css('td.text-center').text).to eq('○')
     get admin_user_path(admin)
@@ -77,7 +78,7 @@ RSpec.describe 'User account management', type: :request do
       expect { delete admin_user_path(other) }.not_to change(User, :count)
       expect(response).to redirect_to(admin_user_path(other))
       follow_redirect!
-      expect(response.body).to include('利用終了していないアイテムがあるため削除できません。')
+      expect(response.body).to include('利用終了していない対象があるため削除できません。')
       expect(status.reload.unfinished?).to be(true)
       expect(status.user_id).to eq(other.id)
       get status_path

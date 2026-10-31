@@ -18,10 +18,10 @@ RSpec.describe 'Browser usage', type: :system do
     expect(page).to have_css('.btn-success', style: { 'background-color' => 'rgb(40, 167, 69)' })
     click_button '利用終了'
     expect(page).to have_css('.badge', text: '✅ 利用可能')
-    dismiss_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
+    dismiss_action_confirmation('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_content(user.name)
     expect(page).to have_button('ログアウト')
-    accept_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
+    accept_action_confirmation('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_current_path(login_path)
   ensure
     travel_back
@@ -96,11 +96,11 @@ RSpec.describe 'Browser usage', type: :system do
     user = create_user(admin: true)
     item = Item.create!(name: '会議室')
     login(user)
-    click_link 'アイテム一覧'
-    dismiss_confirm { click_button '削除' }
+    click_link '利用設定一覧'
+    dismiss_action_confirmation { click_button '削除' }
     expect(page).to have_content(item.name)
     expect(Item.exists?(item.id)).to be(true)
-    accept_confirm { click_button '削除' }
+    accept_action_confirmation { click_button '削除' }
     expect(page).to have_content('削除しました')
     expect(Item.exists?(item.id)).to be(false)
   end
@@ -120,11 +120,11 @@ RSpec.describe 'Browser usage', type: :system do
     expect(page).to have_css('.table-responsive table')
     expect(page.evaluate_script('document.documentElement.scrollWidth <= window.innerWidth')).to be(true)
     find('[data-navigation-toggle]').click
-    click_link 'アイテム一覧'
-    expect(page).to have_content('アイテム一覧')
-    expect(page).to have_css('h1.h4', text: 'アイテム一覧')
+    click_link '利用設定一覧'
+    expect(page).to have_content('利用設定一覧')
+    expect(page).to have_css('h1.h4', text: '利用設定一覧')
     find('[data-navigation-toggle]').click
-    accept_confirm('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
+    accept_action_confirmation('ログアウトします。よろしいですか？') { click_button 'ログアウト' }
     expect(page).to have_current_path(login_path)
   end
 end

@@ -18,6 +18,12 @@ Rails.application.routes.draw do
   delete '/logout', to: 'sessions#destroy'
   get '/status', to: 'statuses#home'
   get '/history', to: 'usage_histories#index', as: 'usage_histories'
+  resources :reservations, only: [:index, :new, :create, :edit, :update] do
+    member do
+      patch :cancel
+      patch :finish
+    end
+  end
   post '/status/deadline_preview', to: 'statuses#deadline_preview', as: 'deadline_preview'
   post '/update_status/:id', to: 'statuses#update_status', as: 'update_status'
   post '/extend_status/:id', to: 'statuses#extend_status', as: 'extend_status'
