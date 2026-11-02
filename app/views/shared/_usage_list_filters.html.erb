@@ -1,0 +1,23 @@
+<%= form_with url: url, method: :get, class: 'row g-2 align-items-end mb-2', data: { usage_list_filters: true } do |f| %>
+  <div class="col-md-4">
+    <%= f.label :target, '対象', class: 'form-label' %>
+    <%= f.select :target, options_for_select(@targets, @filters['target']), { include_blank: 'すべて' }, class: 'form-select' %>
+    <div class="form-check mt-2">
+      <%= f.check_box :include_inactive_targets, { checked: @filters['include_inactive_targets'] == '1', class: 'form-check-input', data: { filter_options_toggle: true } } %>
+      <%= f.label :include_inactive_targets, history ? '利用停止中・削除済みを含める' : '利用停止中を含める', class: 'form-check-label small' %>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <%= f.label :member, '利用者', class: 'form-label' %>
+    <%= f.select :member, options_for_select(@members, @filters['member']), { include_blank: '全員' }, class: 'form-select' %>
+    <div class="form-check mt-2">
+      <%= f.check_box :include_inactive_members, { checked: @filters['include_inactive_members'] == '1', class: 'form-check-input', data: { filter_options_toggle: true } } %>
+      <%= f.label :include_inactive_members, history ? '無効・削除済みを含める' : '無効なアカウントを含める', class: 'form-check-label small' %>
+    </div>
+  </div>
+  <div class="col-md-4 d-flex gap-2">
+    <%= f.submit '絞り込む', class: 'btn btn-primary' %>
+    <%= link_to 'クリア', url, class: 'btn btn-outline-secondary' %>
+  </div>
+<% end %>
+<p class="small text-body-secondary mb-4">チェックは選択肢の表示を切り替えます。対象・利用者を指定しない場合は、停止中・無効のデータも一覧に表示します。</p>

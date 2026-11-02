@@ -1,0 +1,8 @@
+<dialog id="<%= dialog_id %>" aria-labelledby="<%= dialog_id %>-title" aria-describedby="<%= dialog_id %>-message" class="confirmation-dialog border rounded p-4 shadow"<% if local_assigns[:preview_url] %> data-preview-url="<%= preview_url %>"<% end %>>
+  <h2 id="<%= dialog_id %>-title" class="h4"><%= heading %></h2>
+  <p id="<%= dialog_id %>-message" data-confirmation-message class="alert alert-warning my-3"></p>
+  <form method="dialog" class="d-flex justify-content-end gap-2">
+    <button value="cancel" class="btn btn-outline-secondary" autofocus>戻る</button>
+    <button value="confirm" class="btn btn-primary">確定する</button>
+  </form>
+</dialog>

@@ -278,7 +278,7 @@ RSpec.describe 'Item usage', type: :request do
       expect(response).to redirect_to(status_path)
       expect(item.reload.current_usage.unfinished?).to be(true)
       expect(debug_messages).to include(
-        "Slack通知スキップ(Webhook未設定): #{item.name}を#{user.name}さんが10/27(火) 12:30まで利用します。"
+        "Slack通知スキップ(Webhook未設定): #{item.name}の利用を#{user.name}さんが開始しました。利用期限は10/27(火) 12:30までです。"
       )
       expect(WebMock).not_to have_requested(:post, /hooks\.slack\.com/)
     end
@@ -294,7 +294,7 @@ RSpec.describe 'Item usage', type: :request do
     it 'posts notifications for starting, extending and ending usage' do
       expected = [
         ["🔵 *#{item.name} の利用を開始*", '利用期限', '10/27(火) 12:30',
-         "#{item.name}を#{user.name}さんが10/27(火) 12:30まで利用します。"],
+         "#{item.name}の利用を#{user.name}さんが開始しました。利用期限は10/27(火) 12:30までです。"],
         ["🕒 *#{item.name} の利用を延長*", '利用期限', '10/27(火) 12:30 → 13:00',
          "#{item.name}の利用期限を#{user.name}さんが10/27(火) 12:30 → 13:00に延長しました。"],
         ["✅ *#{item.name} の利用を終了*", '状態', '利用可能',
@@ -308,7 +308,7 @@ RSpec.describe 'Item usage', type: :request do
               { 'type' => 'section', 'text' => { 'type' => 'mrkdwn', 'text' => title, 'verbatim' => true } },
               { 'type' => 'section', 'text' => {
                 'type' => 'mrkdwn', 'verbatim' => true,
-                'text' => title.include?('利用を延長') ? "*利用者*: #{user.name}\n*変更前*: 10/27(火) 12:30\n*利用期限*: 10/27(火) 13:00" : "*利用者*: #{user.name}\n*#{label}*: #{value}"
+                'text' => title.include?('利用を延長') ? "*利用者*: #{user.name}\n*延長前の利用期限*: 10/27(火) 12:30\n*延長後の利用期限*: 10/27(火) 13:00" : "*利用者*: #{user.name}\n*#{label}*: #{value}"
               } }
             ]
           end
@@ -324,7 +324,7 @@ RSpec.describe 'Item usage', type: :request do
       reserve(expires_at: Time.zone.local(2026, 10, 27, 23, 30))
       notification = stub_request(:post, webhook_url).with do |request|
         payload = JSON.parse(request.body)
-        payload['blocks'][1]['text']['text'] == "*利用者*: #{user.name}\n*変更前*: 10/27(火) 23:30\n*利用期限*: 10/28(水) 00:30"
+        payload['blocks'][1]['text']['text'] == "*利用者*: #{user.name}\n*延長前の利用期限*: 10/27(火) 23:30\n*延長後の利用期限*: 10/28(水) 00:30"
       end.to_return(status: 200, body: 'ok')
       post extend_status_path(item), params: { expires_at: '2026-10-28 00:30', confirmed_expires_at: Time.zone.local(2026, 10, 28, 0, 30).iso8601 }
       expect(notification).to have_been_requested.once

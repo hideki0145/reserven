@@ -28,27 +28,28 @@
   </head>
 
   <body>
-    <nav class="app-title navbar navbar-expand-md bg-body-tertiary border-bottom mb-4" aria-label="メインナビゲーション">
+    <nav class="app-title navbar navbar-expand-lg bg-body-tertiary border-bottom mb-4" aria-label="メインナビゲーション">
       <div class="container gap-2">
         <%= link_to root_path, class: 'navbar-brand d-flex align-items-center gap-2' do %>
           <%= image_tag '/icon.svg', width: 28, height: 28, alt: '', aria: { hidden: true } %>
           <span>Reserven</span>
         <% end %>
-        <button type="button" class="navbar-toggler d-md-none ms-auto" data-navigation-toggle
+        <button type="button" class="navbar-toggler d-lg-none ms-auto" data-navigation-toggle
                 aria-label="メニュー" aria-controls="app-navigation" aria-expanded="false" hidden>
           <span class="navbar-toggler-icon" aria-hidden="true"></span>
         </button>
         <ul id="app-navigation" class="app-navigation navbar-nav ms-auto flex-row flex-wrap gap-2 align-items-center">
           <% if current_user %>
-            <li class="nav-item"><%= link_to '利用状況', status_path, class: 'nav-link' %></li>
-            <li class="nav-item"><%= link_to '利用履歴', usage_histories_path, class: 'nav-link' %></li>
+            <li class="nav-item"><%= navigation_link '利用状況', status_path, controller: 'statuses' %></li>
+            <li class="nav-item"><%= navigation_link '利用履歴', usage_histories_path, controller: 'usage_histories' %></li>
+            <li class="nav-item"><%= navigation_link '予約一覧', reservations_path, controller: 'reservations' %></li>
             <% if current_user.admin? %>
-              <li class="nav-item"><%= link_to 'ユーザ一覧', admin_users_path, class: 'nav-link' %></li>
-              <li class="nav-item"><%= link_to 'アイテム一覧', admin_items_path, class: 'nav-link' %></li>
+              <li class="nav-item"><%= navigation_link 'ユーザ一覧', admin_users_path, controller: 'admin/users' %></li>
+              <li class="nav-item"><%= navigation_link '利用設定一覧', admin_items_path, controller: 'admin/items' %></li>
             <% end %>
             <li class="nav-item"><%= button_to 'ログアウト', logout_path, method: :delete, form: { data: { confirm: 'ログアウトします。よろしいですか？' } }, class: 'nav-link btn btn-link' %></li>
           <% else %>
-            <li class="nav-item"><%= link_to 'ログイン', login_path, class: 'nav-link' %></li>
+            <li class="nav-item"><%= navigation_link 'ログイン', login_path, controller: 'sessions' %></li>
           <% end %>
         </ul>
       </div>
@@ -62,5 +63,6 @@
       <% end %>
       <%= yield %>
     </main>
+    <%= render 'shared/confirmation_dialog', dialog_id: 'action-confirmation', heading: '操作の確認' %>
   </body>
 </html>

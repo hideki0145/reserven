@@ -13,13 +13,18 @@
   </div>
   <div class="form-check mb-3">
     <%= f.check_box :disabled, class: 'form-check-input' %>
-    <%= f.label :disabled, 'アイテム無効', class: 'form-check-label' %>
-    <div class="form-text">無効にすると新規利用・延長を停止します。利用中でも終了操作はできます。</div>
+    <%= f.label :disabled, '利用停止', class: 'form-check-label' %>
+    <div class="form-text">利用停止中は、新規利用・予約登録・延長・期間変更ができません。利用終了・予約取消はできます。</div>
+  </div>
+  <div class="mb-3">
+    <%= f.label :usage_mode, '利用方式', class: 'form-label' %>
+    <%= f.select :usage_mode, [['すぐに利用', 'immediate'], ['予約して利用', 'reservation']], {}, class: 'form-select' %>
+    <div class="form-text">利用中・予約予定がある間は変更できません。</div>
   </div>
   <div class="mb-3">
     <%= f.label :reason_policy, '利用理由', class: 'form-label' %>
     <%= f.select :reason_policy, [['入力しない', 'none'], ['任意', 'optional'], ['必須', 'required']], {}, class: 'form-select' %>
-    <div class="form-text">新しく利用を開始するときに適用します。登録済みの理由は変更・削除しません。</div>
+    <div class="form-text">新規の利用・予約に適用します。登録済みの利用理由は変更・削除しません。</div>
   </div>
   <%= f.submit(item.persisted? ? '更新する' : '登録する', class: 'btn btn-primary') %>
 <% end %>

@@ -16,7 +16,7 @@ RSpec.describe SlackNotifier do
     expect(Rails.logger).not_to receive(:warn)
     expect(Rails.logger).not_to receive(:debug)
 
-    described_class.deliver(payload)
+    expect(described_class.deliver(payload)).to be(true)
 
     expect(notification).to have_been_requested.once
   end
@@ -49,22 +49,35 @@ RSpec.describe SlackNotifier do
     end
   end
 
-  [403, 500].each do |status|
+  [403, 429, 500].each do |status|
     it "logs HTTP #{status} without exposing the URL or response body" do
       notification = stub_request(:post, webhook_url).to_return(status: status, body: 'SECRET')
       expect(Rails.logger).to receive(:warn).with("Slack notification failed (HTTP #{status})")
-      described_class.deliver(payload)
-      expect(notification).to have_been_requested.once
+      expect(described_class.deliver(payload)).to be(false)
+      expect(notification).to have_been_requested.times(status == 500 ? 2 : 1)
     end
   end
 
   [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED,
-   Errno::ECONNRESET, OpenSSL::SSL::SSLError, EOFError].each do |error_class|
+   Errno::ECONNRESET, OpenSSL::SSL::SSLError, EOFError, Net::HTTPBadResponse, Net::ProtocolError].each do |error_class|
     it "absorbs #{error_class} and logs only its class" do
       notification = stub_request(:post, webhook_url).to_raise(error_class.new('SECRET'))
       expect(Rails.logger).to receive(:warn).with("Slack notification failed (#{error_class})")
-      expect { described_class.deliver(payload) }.not_to raise_error
-      expect(notification).to have_been_requested.once
+      expect(described_class.deliver(payload)).to be(false)
+      expect(notification).to have_been_requested.twice
     end
+  end
+
+  it 'recovers from a temporary server error without logging a failure' do
+    notification = stub_request(:post, webhook_url).to_return(status: 503).then.to_return(status: 200)
+    expect(Rails.logger).not_to receive(:warn)
+    expect(described_class.deliver(payload)).to be(true)
+    expect(notification).to have_been_requested.twice
+  end
+
+  it 'recovers from a temporary connection error' do
+    notification = stub_request(:post, webhook_url).to_raise(Net::OpenTimeout).then.to_return(status: 200)
+    expect(described_class.deliver(payload)).to be(true)
+    expect(notification).to have_been_requested.twice
   end
 end

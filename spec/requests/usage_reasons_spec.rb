@@ -25,8 +25,10 @@ RSpec.describe 'Usage reasons', type: :request do
     url = 'https://hooks.slack.com/services/TEST/CHANNEL/SECRET'
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with('SLACK_WEBHOOK_URL').and_return(url)
+    payloads = []
     notification = stub_request(:post, url).with do |request|
-      JSON.parse(request.body)['blocks'][1]['text']['text'].include?('*利用理由*: 検証 &lt;作業&gt;')
+      payloads << JSON.parse(request.body)
+      true
     end.to_return(status: 200)
     post update_status_path(item), params: { expires_at: '13:00', reason: '  検証 <作業>  ' }
     expect(Usage.sole.reason).to eq('検証 <作業>')
@@ -34,6 +36,10 @@ RSpec.describe 'Usage reasons', type: :request do
     post extend_status_path(item), params: { expires_at: '14:00' }
     post end_use_status_path(item)
     expect(notification).to have_been_requested.times(3)
+    payloads.first(2).each do |payload|
+      expect(payload['blocks'].last['text']['text']).to eq('*利用理由*: 検証 &lt;作業&gt;')
+    end
+    expect(payloads.last.to_json).not_to include('利用理由', '検証')
     get usage_histories_path
     expect(response.body).to include('検証 &lt;作業&gt;')
   end
