@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_000004) do
   create_table "items", force: :cascade do |t|
     t.string "name", null: false
     t.datetime "created_at", null: false
@@ -45,6 +45,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_000003) do
     t.datetime "cancelled_at"
     t.integer "cancelled_by_id"
     t.string "cancelled_by_name_snapshot"
+    t.integer "lock_version", default: 0, null: false
     t.index ["cancelled_by_id"], name: "index_usages_on_cancelled_by_id"
     t.index ["created_by_id"], name: "index_usages_on_created_by_id"
     t.index ["finished_by_id"], name: "index_usages_on_finished_by_id"

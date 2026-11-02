@@ -61,7 +61,7 @@ class User < ApplicationRecord
     end
     return unless usages.immediates.unfinished.exists?
 
-    errors.add(:base, '利用終了していないアイテムがあるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
+    errors.add(:base, '利用終了していない対象があるため削除できません。利用終了後に削除するか、アカウントを無効化してください。')
     throw :abort
   end
 

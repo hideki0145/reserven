@@ -19,7 +19,7 @@ class Admin::ItemsController < ApplicationController
     @item = Item.new(item_params)
 
     if @item.save
-      redirect_to admin_item_path(@item), notice: "アイテム「#{@item.name}」を登録しました。"
+      redirect_to admin_item_path(@item), notice: "利用設定「#{@item.name}」を登録しました。"
     else
       render :new, status: :unprocessable_content
     end
@@ -33,7 +33,7 @@ class Admin::ItemsController < ApplicationController
     @item = Item.find(params[:id])
 
     if @item.update(item_params)
-      redirect_to admin_item_path(@item), notice: "アイテム「#{@item.name}」を更新しました。"
+      redirect_to admin_item_path(@item), notice: "利用設定「#{@item.name}」を更新しました。"
     else
       render :edit, status: :unprocessable_content
     end
@@ -42,7 +42,7 @@ class Admin::ItemsController < ApplicationController
   def destroy
     item = Item.find(params[:id])
     if item.destroy
-      redirect_to admin_items_path, notice: "アイテム「#{item.name}」を削除しました。"
+      redirect_to admin_items_path, notice: "利用設定「#{item.name}」を削除しました。"
     else
       redirect_to admin_item_path(item), alert: item.errors.full_messages.join(' ')
     end
@@ -51,7 +51,7 @@ class Admin::ItemsController < ApplicationController
   private
 
   def item_params
-    params.require(:item).permit(:name, :disabled, :reason_policy)
+    params.require(:item).permit(:name, :disabled, :reason_policy, :usage_mode)
   end
 
   def ordering_model

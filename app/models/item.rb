@@ -27,12 +27,12 @@ class Item < ApplicationRecord
     usage_mode_immediate? && usage_state(user_id, now: now) == :available
   end
 
-  def can_extend_usage?(user_id)
-    !disabled? && can_end_usage?(user_id)
+  def can_extend_usage?(user_id, manager: false)
+    !disabled? && can_end_usage?(user_id, manager: manager) && current_usage.user&.disabled? == false
   end
 
-  def can_end_usage?(user_id)
-    !!(current_usage&.unfinished? && current_usage.user_id == user_id)
+  def can_end_usage?(user_id, manager: false)
+    !!(current_usage&.unfinished? && (current_usage.user_id == user_id || manager))
   end
 
   # The caller holds the item's lock while checking availability and starting usage.
@@ -55,12 +55,12 @@ class Item < ApplicationRecord
 
   def reject_deletion_while_in_use
     if usages.reservations.outstanding.exists?
-      errors.add(:base, '有効な予約があるため削除できません。予約を整理するか、無効化してください。')
+      errors.add(:base, '有効な予約があるため削除できません。予約を整理するか、利用を停止してください。')
       throw :abort
     end
     return unless current_usage&.unfinished?
 
-    errors.add(:base, '利用中のアイテムは削除できません。利用終了後に削除するか、無効化してください。')
+    errors.add(:base, '利用中の対象は削除できません。利用終了後に削除するか、利用を停止してください。')
     throw :abort
   end
 end

@@ -50,7 +50,7 @@ RSpec.describe ReservationBooking do
     expect(usage.reservation_state).to eq(:active)
     expect(usage.grace_period?(now: usage.ends_at)).to be(false)
     expect do
-      described_class.update!(usage.id, actor: user, starts_at: usage.starts_at, ends_at: now + 40.minutes)
+      described_class.update!(usage.id, expected_version: usage.lock_version, actor: user, starts_at: usage.starts_at, ends_at: now + 40.minutes)
     end.to raise_error(described_class::Invalid, /重複/)
     expect(usage.reload.ends_at).to eq(now + 30.minutes)
   end
@@ -85,7 +85,7 @@ RSpec.describe ReservationBooking do
     expect do
       described_class.cancel!(usage.id, actor: admin)
     end.to raise_error(described_class::Forbidden)
-    change = described_class.update!(usage.id, actor: manager, starts_at: start - 1.hour, ends_at: finish + 1.hour)
+    change = described_class.update!(usage.id, expected_version: usage.lock_version, actor: manager, starts_at: start - 1.hour, ends_at: finish + 1.hour)
     expect(change.previous['starts_at']).to eq(start)
     expect(usage.reload).to have_attributes(starts_at: start - 1.hour, updated_by: manager)
     described_class.cancel!(usage.id, actor: manager)
@@ -119,7 +119,7 @@ RSpec.describe ReservationBooking do
     travel_to(start)
     expect { described_class.cancel!(usage.id, actor: user) }.to raise_error(described_class::Invalid)
     expect do
-      described_class.update!(usage.id, actor: user, starts_at: start - 1.hour, ends_at: finish)
+      described_class.update!(usage.id, expected_version: usage.lock_version, actor: user, starts_at: start - 1.hour, ends_at: finish)
     end.to raise_error(described_class::Invalid)
     travel_to(finish)
     expect { described_class.finish!(usage.id, actor: user) }.to raise_error(described_class::Invalid)
@@ -133,9 +133,9 @@ RSpec.describe ReservationBooking do
     usage = book(reason: '検証')
     item.update!(reason_policy: 'none')
     expect do
-      described_class.update!(usage.id, actor: user, starts_at: start, ends_at: finish + 1.hour, reason: '')
+      described_class.update!(usage.id, expected_version: usage.lock_version, actor: user, starts_at: start, ends_at: finish + 1.hour, reason: '')
     end.to raise_error(ActiveRecord::RecordInvalid)
-    described_class.update!(usage.id, actor: user, starts_at: start, ends_at: finish + 1.hour)
+    described_class.update!(usage.id, expected_version: usage.lock_version, actor: user, starts_at: start, ends_at: finish + 1.hour)
     expect(usage.reload.reason).to eq('検証')
   end
 

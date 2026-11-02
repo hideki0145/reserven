@@ -1,5 +1,6 @@
 class ReservationBooking
   class Invalid < StandardError; end
+  class Stale < Invalid; end
   class Forbidden < StandardError; end
   Change = Struct.new(:usage, :previous, keyword_init: true)
   KEEP_REASON = Object.new.freeze
@@ -33,14 +34,17 @@ class ReservationBooking
     end
   end
 
-  def self.update!(id, actor:, starts_at:, ends_at:, reason: KEEP_REASON)
+  def self.update!(id, actor:, starts_at:, ends_at:, expected_version:, reason: KEEP_REASON)
     with_reservation(id, actor) do |usage, item, now|
+      unless expected_version.to_s.match?(/\A\d+\z/) && usage.lock_version == expected_version.to_i
+        raise Stale, '予約が変更されています。最新の内容を確認して操作し直してください。'
+      end
       check_item!(item)
-      raise Invalid, '無効な利用者の予約は変更できません。取消または利用終了してください。' if usage.user.nil? || usage.user.disabled?
+      raise Invalid, '無効なアカウントの予約は変更できません。取消または利用終了してください。' if usage.user.nil? || usage.user.disabled?
       raise Invalid, '終了・取消済みの予約は変更できません。' unless [:scheduled, :active].include?(usage.reservation_state(now: now))
 
       if usage.starts_at <= now
-        raise Invalid, '予約時間内の開始日時は変更できません。' unless starts_at == usage.starts_at
+        raise Invalid, '予約期間中の開始日時は変更できません。' unless starts_at == usage.starts_at
         raise Invalid, '終了日時は現在より後にしてください。' unless valid_time?(ends_at) && ends_at > now
       else
         validate_period!(starts_at, ends_at, now)
@@ -66,7 +70,7 @@ class ReservationBooking
 
   def self.finish!(id, actor:)
     with_reservation(id, actor) do |usage, _, now|
-      raise Invalid, '予約時間内のみ利用終了できます。' unless usage.reservation_state(now: now) == :active
+      raise Invalid, '予約期間中のみ利用終了できます。' unless usage.reservation_state(now: now) == :active
 
       usage.finish!(actor, now: now)
       usage
@@ -122,7 +126,7 @@ class ReservationBooking
     conflict = overlap.order(:starts_at, :id).first
     return unless conflict
 
-    period = "#{I18n.l(conflict.starts_at, format: :timestamp)} ～ #{I18n.l(conflict.ends_at, format: :timestamp)}"
+    period = "#{I18n.l(conflict.starts_at, format: :usage_datetime)} ～ #{I18n.l(conflict.ends_at, format: :usage_datetime)}"
     raise Invalid, "#{item.name}は#{period}の予約と重複します。既存予約を変更するか、別の期間を指定してください。"
   end
 

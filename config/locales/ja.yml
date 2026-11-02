@@ -1,11 +1,14 @@
 ja:
   time:
     formats:
-      timestamp: '%Y/%m/%d %H:%M:%S'
+      timestamp: '%Y/%m/%d %H:%M'
+      usage_datetime: '%Y/%m/%d(%a) %H:%M'
+      usage_deadline: '%m/%d(%a) %H:%M'
+      usage_time: '%H:%M'
   activerecord:
     models:
       user: ユーザ
-      item: アイテム
+      item: 利用対象
       usage: ステータス
     attributes:
       user:
@@ -22,7 +25,7 @@ ja:
       item:
         usage_mode: 利用方式
         reason_policy: 利用理由の入力設定
-        disabled: アイテム無効
+        disabled: 利用停止
         id: ID
         name: 名前
         created_at: 登録日時

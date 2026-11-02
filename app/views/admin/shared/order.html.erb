@@ -8,7 +8,7 @@
       <li class="border rounded p-2 mb-2 d-flex align-items-center gap-2" data-ordering-row data-record-id="<%= record.id %>">
         <%= hidden_field_tag 'ids[]', record.id, id: nil %>
         <button type="button" class="btn btn-outline-secondary order-handle" draggable="true" aria-label="<%= record.name %>をドラッグして移動" title="ドラッグして移動">☰</button>
-        <div class="flex-grow-1 order-name"><%= record.name %> <% if record.disabled? %><span class="badge text-bg-secondary">無効</span><% end %></div>
+        <div class="flex-grow-1 order-name"><%= record.name %> <% if record.disabled? %><span class="badge text-bg-secondary"><%= record.is_a?(Item) ? '利用停止中' : '無効' %></span><% end %></div>
         <div class="d-flex gap-1 flex-shrink-0">
           <button type="button" class="btn btn-outline-secondary" data-order-move="up" aria-label="<%= record.name %>を上へ">↑</button>
           <button type="button" class="btn btn-outline-secondary" data-order-move="down" aria-label="<%= record.name %>を下へ">↓</button>

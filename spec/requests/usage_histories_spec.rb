@@ -17,6 +17,7 @@ RSpec.describe 'Usage history access', type: :request do
     rows = Nokogiri::HTML(response.body).css('.history-table tbody tr')
     expect(rows.length).to eq(1)
     expect(rows.first.text).to include(own.user_name_snapshot)
+    expect(rows.first.text).not_to match(/\d{2}:\d{2}:\d{2}/)
     get usage_histories_path(member: "id:#{other.id}")
     expect(Nokogiri::HTML(response.body).css('.history-table tbody tr').sole.text).to include(other.name)
     expect(response.body).not_to include('<strong>未終了の端末</strong>')

@@ -2,7 +2,7 @@
 
 <div class="alert alert-warning">
   <strong><%= @item.name %></strong>の利用期限は、
-  <strong><%= @expires_at.to_date == Time.current.to_date.tomorrow ? '翌日 ' : '' %><%= l @expires_at, format: '%m/%d(%a) %H:%M' %></strong>です。
+  <strong><%= @expires_at.to_date == Time.current.to_date.tomorrow ? '翌日 ' : '' %><%= l @expires_at, format: :usage_deadline %></strong>です。
   <div>この日時まで<%= @operation == :start ? '利用' : '延長' %>します。よろしいですか？</div>
 </div>
 
@@ -10,6 +10,7 @@
 <%= form_with url: destination, local: true, class: 'd-flex flex-wrap gap-2' do |f| %>
   <%= f.hidden_field :expires_at, value: params[:expires_at] %>
   <%= f.hidden_field :reason, value: params.permit(:reason)[:reason] %>
+  <%= f.hidden_field :usage_id, value: params.permit(:usage_id)[:usage_id], id: nil %>
   <%= f.hidden_field :confirmed_expires_at, value: @expires_at.iso8601 %>
   <%= f.submit '確定する', class: 'btn btn-primary' %>
   <%= link_to '戻る', status_path, class: 'btn btn-outline-secondary' %>
