@@ -4,7 +4,7 @@
 
 利用者・管理者向けの操作手順は[操作マニュアル](doc/manual.md)を参照してください。
 
-- Ruby 4.0.9 / Rails 8.1.4
+- Ruby 4.0.10 / Rails 8.1.4.1
 - SQLite(開発・テスト・本番)
 - Bootstrap 5.3.8のCSSをCDN配信
 - PropshaftでCSS・JavaScriptを配信。Webpacker・CSSコンパイルは不要
@@ -174,15 +174,15 @@ Nginxの配置例では`X-Forwarded-For`を`$remote_addr`で上書きし、接�
 
 ## 開発環境
 
-Ruby 4.0.9とBundler 4.0.23を用意します。miseを利用する場合：
+Ruby 4.0.10とBundler 4.1.0を用意します。miseを利用する場合：
 
-`mise.toml`でRubyとブラウザテスト用のNode.jsのバージョンを管理しています。
+`.ruby-version`と`.node-version`でRubyとブラウザテスト用のNode.jsのバージョンを管理し、miseから参照します。
 
 ```sh
 cp .env.sample .env
 mise install
 ruby -v
-gem install bundler -v 4.0.23
+gem install bundler -v 4.1.0
 bin/setup --skip-server
 ```
 
@@ -221,7 +221,7 @@ bin/rails server
 
 ## テスト
 
-ブラウザテストではNode.js 24系とPlaywrightのChromiumを使用します。アプリの実行・本番アセット生成にはNode.jsは不要です。
+ブラウザテストではNode.js 26系とPlaywrightのChromiumを使用します。アプリの実行・本番アセット生成にはNode.jsは不要です。
 画面表示とブラウザテストには、Bootstrapの配信元`cdn.jsdelivr.net`へ接続できる環境が必要です。
 
 ```sh
@@ -287,7 +287,7 @@ Capybaraの設定は`spec/support/capybara.rb`で管理します。
 
 単一のLinuxサーバにNginx＋Puma＋systemdで配置する構成を想定しています。DockerやFly.ioは使用しません。
 
-1. 専用ユーザ`reserven`、Ruby 4.0.9、Bundler 4.0.23を用意します。
+1. 専用ユーザ`reserven`、Ruby 4.0.10、Bundler 4.1.0を用意します。
 2. アプリを`/srv/reserven/current`へ配置し、書き込み可能な`/srv/reserven/shared/storage`を作成します。
 3. `config/deploy/reserven.env.sample`を参考に`/etc/reserven.env`を作成します。実際の秘密情報はリポジトリに保存せず、このファイルを専用ユーザだけが読めるようにします。
 4. アプリのディレクトリで、以下を実行します。
@@ -424,12 +424,12 @@ SQLiteは標準設定を使用し、現在使っていないフレームワー�
 
 再生成する場合は、プロジェクトのルートから以下を実行します。
 既存のRailsプロジェクト内では`rails new`を実行できないため、比較用ディレクトリへ移動します。
-`BUNDLE_GEMFILE`でこのプロジェクトのRails 8.1.4を使用し、
+`BUNDLE_GEMFILE`でこのプロジェクトのGemfile.lockに記録されたRailsを使用し、
 `--no-rc`で個人の生成オプションの影響を除きます。
 
 ```sh
 project_dir="$PWD"
-reference_dir=$(mktemp -d /tmp/reserven-rails814.XXXXXX)
+reference_dir=$(mktemp -d /tmp/reserven-rails-reference.XXXXXX)
 cd "$reference_dir"
 BUNDLE_GEMFILE="$project_dir/Gemfile" bundle exec rails new reserven \
   --database=sqlite3 \
