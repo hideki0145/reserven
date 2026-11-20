@@ -1,7 +1,5 @@
-[tools]
-ruby = "4.0.9"
-# Node.js is used only for Playwright browser tests.
-node = "24.22.1"
+[settings]
+idiomatic_version_file_enable_tools = ["ruby", "node"]
 
 [env]
 _.file = ".env"
